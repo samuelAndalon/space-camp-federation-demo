@@ -38,5 +38,5 @@ const server = new ApolloServer({
 });
 
 server.listen({ port }).then(({ url }) => {
-  console.log(`Astronauts service ready at ${url}`);
+  console.log(`Astronauts graphQL service ready at ${url}`);
 });

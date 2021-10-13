@@ -27,13 +27,14 @@ const typeDefs = gql`
 
 const resolvers = {
   Astronaut: {
-    async missions(astronaut) {
-      const res = await fetch(`${apiUrl}/missions`);
-      const missions = await res.json();
-
-      return missions.filter(({ crew }) =>
-        crew.includes(parseInt(astronaut.id))
-      );
+    missions(astronaut) {
+      return fetch(`${apiUrl}/missions`)
+        .then(res => res.json())
+        .then(missions =>
+          missions.filter(({ crew }) => 
+            crew.includes(parseInt(astronaut.id))
+          )
+        );
     }
   },
   Mission: {
@@ -56,5 +57,5 @@ const server = new ApolloServer({
 });
 
 server.listen({ port }).then(({ url }) => {
-  console.log(`Missions service ready at ${url}`);
+  console.log(`Missions graphQL service ready at ${url}`);
 });
