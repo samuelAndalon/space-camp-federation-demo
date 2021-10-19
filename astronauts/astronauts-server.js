@@ -18,23 +18,28 @@ const typeDefs = gql`
 `;
 
 const resolvers = {
-  Astronaut: {
-    __resolveReference(ref) {
-      return astronautsService.getAstronaut(ref.id);
-    }
-  },
   Query: {
-    astronaut(_, { id }) {
-      return astronautsService.getAstronaut(id);
-    },
-    astronauts() {
-      return astronautsService.getAstronauts();
+    astronaut: (_, { id }) => astronautsService.getAstronaut(id),
+    astronauts: () => astronautsService.getAstronauts()
+  },
+  Astronaut: {
+    __resolveReference: (ref, context) => {
+      return context.loaders.astronautsDataLoader.load(ref.id);
+      //return astronautsService.getAstronaut(ref.id);
     }
   }
 };
 
 const server = new ApolloServer({
-  schema: buildFederatedSchema([{ typeDefs, resolvers }])
+  schema: buildFederatedSchema([{ typeDefs, resolvers }]),
+  context: ({ req }) => {
+    console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
+    return {
+      loaders: {
+        astronautsDataLoader: astronautsService.getAstronautsDataLoader()
+      }
+    }
+  }
 });
 
 server.listen({ port }).then(({ url }) => {
