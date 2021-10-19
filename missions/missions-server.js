@@ -21,14 +21,14 @@ const typeDefs = gql`
 
   extend type Query {
     mission(id: ID!): Mission
-    missions: [Mission]
+    missions(ids: [ID!]): [Mission]
   }
 `;
 
 const resolvers = {
   Query: {
     mission: (_, { id }) => missionsService.getMission(id),
-    missions: () => missionsService.getMissions()
+    missions: (_, { ids }) => missionsService.getMissions(ids ? ids : [])
   },
   Astronaut: {
     missions: (astronaut, _, context) => {
