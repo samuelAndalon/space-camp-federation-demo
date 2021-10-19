@@ -1,0 +1,52 @@
+query Missions {
+  missions {
+    id
+    designation
+    crew {
+      id
+      name
+    }
+  }
+}
+
+query Astronauts {
+  astronauts {
+    id
+    name
+    missions {
+      designation
+    }
+  }
+}
+
+query Mission {
+  mission_1: mission(id: 1) {
+    designation
+    crew {
+      id
+      name
+    }
+  }
+  mission_2: mission(id: 2) {
+    designation
+    crew {
+      id
+      name
+    }
+  }
+}
+
+query Missions {
+  missions(ids: [1,2]) {
+    id
+    designation
+    crew {
+      id
+      name
+    }
+  }
+}
+
+curl 'http://localhost:4000/' \
+  -H 'Content-Type: application/json' \
+  --data-binary '[{"query":"query Mission {\n  mission(id: 1) {\n    designation\n    crew {\n      id\n      name\n    }\n  }\n}"}, {"query":"query Mission {\n  mission(id: 5) {\n    designation\n    crew {\n      id\n      name\n    }\n  }\n}"}]' --compressed
