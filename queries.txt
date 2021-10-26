@@ -50,3 +50,19 @@ query Missions {
 curl 'http://localhost:4000/' \
   -H 'Content-Type: application/json' \
   --data-binary '[{"query":"query Mission {\n  mission(id: 1) {\n    designation\n    crew {\n      id\n      name\n    }\n  }\n}"}, {"query":"query Mission {\n  mission(id: 5) {\n    designation\n    crew {\n      id\n      name\n    }\n  }\n}"}]' --compressed
+
+
+curl 'http://localhost:4000/' \
+  -H 'Content-Type: application/json' \
+  --data-binary '[{"query":"query Mission {\n  mission(id: 1) {\n    designation\n    crew {\n      id\n   }\n  }\n}"}, {"query":"query Mission {\n  mission(id: 5) {\n    designation\n    crew {\n      id\n    }\n  }\n}"}]' --compressed
+
+
+// with federation
+curl 'http://localhost:4000/' \
+-H 'Content-Type: application/json' \
+--data-binary '[{"query":"query Mission($id: ID!) {\n  mission(id: $id) {\n    designation\n    crew {\n      id\n      name\n    }\n  }\n}","variables":{"id":1}}, {"query":"query Mission($id: ID!) {\n  mission(id: $id) {\n    designation\n    crew {\n      id\n      name\n    }\n  }\n}","variables":{"id":5}}, {"query":"query Atronaut($id: ID!) {\n  astronaut(id: $id) {\n    id\n    name\n    missions {\n      designation\n    }\n  }\n}","variables":{"id":1}}]' --compressed
+
+// without federation
+curl 'http://localhost:4000/' \
+-H 'Content-Type: application/json' \
+--data-binary '[{"query":"query Mission($id: ID!) {\n  mission(id: $id) {\n    designation\n    crew {\n      id\n    }\n  }\n}","variables":{"id":1}}, {"query":"query Mission($id: ID!) {\n  mission(id: $id) {\n    designation\n    crew {\n      id\n    }\n  }\n}","variables":{"id":5}}, {"query":"query Atronaut($id: ID!) {\n  astronaut(id: $id) {\n    id\n    name\n  }\n}","variables":{"id":1}}]' --compressed

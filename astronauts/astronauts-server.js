@@ -33,7 +33,7 @@ const resolvers = {
 const server = new ApolloServer({
   schema: buildFederatedSchema([{ typeDefs, resolvers }]),
   context: ({ req }) => {
-    console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
+    // console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
     return {
       loaders: {
         astronautsDataLoader: astronautsService.getAstronautsDataLoader()
