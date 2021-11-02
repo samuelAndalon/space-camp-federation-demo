@@ -8,11 +8,10 @@ module.exports = class GraphQLOperationsQueue {
     this.remoteGraphQLBatchedDataSource = new RemoteGraphQLBatchedDataSource();
   }
 
-  enqueue(serviceEndpointDefinition, options, process) {
+  enqueue(serviceEndpointDefinition, options) {
     const operation = {
       serviceEndpointDefinition,
       options,
-      process,
       deferred: new Deferred(),
     }
     this.queue.push(operation);
@@ -42,7 +41,7 @@ module.exports = class GraphQLOperationsQueue {
   
         console.log(
           `dispatch requestsQueue, and resolve promises: ${JSON.stringify(Object.keys(operationsByEndpointDefinition).map((key) => [`key: ${key}`, `# operations: ${operationsByEndpointDefinition[key].length}`]), null, 2)}`
-          );
+        );
 
         for(const serviceName in operationsByEndpointDefinition) {
           //for (const operation of operationsByEndpointDefinition[serviceName]) {

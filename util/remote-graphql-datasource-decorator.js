@@ -9,16 +9,14 @@ module.exports = class RemoteGraphQLDataSourceDecorator extends RemoteGraphQLDat
   }
 
   async process(options) {
-    if (options.kind === GraphQLDataSourceRequestKind.LOADING_SCHEMA) {
-      return super.process(options);
-    } else {
+    if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
       console.log(`request from gateway: ${JSON.stringify(options.request, null, 2)}`);
       const request = options.context.graphQLOperationsQueue.enqueue(
         this.serviceEndpointDefinition,
-        options, 
-        (options) => super.process(options) 
+        options
       );
       return request.deferred.promise;
     }
+    return super.process(options);
   }
 }
