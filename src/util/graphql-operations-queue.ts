@@ -1,18 +1,37 @@
-const queueMicrotask = require('queue-microtask');
-const Deferred = require('./deferred');
-const RemoteGraphQLBatchedDataSource = require('./remote-graphql-batched-datasource');
+import { GraphQLDataSourceProcessOptions, ServiceEndpointDefinition } from '@apollo/gateway';
+import { Deferred } from './deferred';
+import { RemoteGraphQLBatchedDataSource } from './remote-graphql-batched-datasource';
+import { GraphQLResponse } from 'apollo-server-types';
+import queueMicrotask from 'queue-microtask';
 
-module.exports = class GraphQLOperationsQueue {
+interface OperationsByServiceName {
+  [serviceDefinitionName: string]: OperationQueueElement[]
+}
+
+export interface OperationQueueElement {
+  serviceEndpointDefinition: ServiceEndpointDefinition,
+  options: GraphQLDataSourceProcessOptions,
+  deferred: Deferred<GraphQLResponse>
+}
+
+export class GraphQLOperationsQueue {
+
+  queue: OperationQueueElement[];
+  remoteGraphQLBatchedDataSource: RemoteGraphQLBatchedDataSource;
+
   constructor() {
     this.queue = [];
     this.remoteGraphQLBatchedDataSource = new RemoteGraphQLBatchedDataSource();
   }
 
-  enqueue(serviceEndpointDefinition, options) {
-    const operation = {
+  enqueue(
+    serviceEndpointDefinition: ServiceEndpointDefinition, 
+    options: GraphQLDataSourceProcessOptions
+  ): OperationQueueElement {
+    const operation: OperationQueueElement = {
       serviceEndpointDefinition,
       options,
-      deferred: new Deferred(),
+      deferred: new Deferred<GraphQLResponse>(),
     }
     this.queue.push(operation);
   
@@ -29,13 +48,16 @@ module.exports = class GraphQLOperationsQueue {
         // so when a RemoteGraphQLDataSourceDecorator instance enqueues its already know that that query can be served
         // from that graphQL service, otherwise it would not be enqueued from there.
 
-        const operationsByEndpointDefinition = this.queue.reduce((acc, operation) => {
-          if (!acc.hasOwnProperty(operation.serviceEndpointDefinition.name)) {
-            acc[operation.serviceEndpointDefinition.name] = [];
-          }
-          acc[operation.serviceEndpointDefinition.name].push(operation);
-          return acc;
-        }, {});
+        const operationsByEndpointDefinition: OperationsByServiceName = this.queue.reduce(
+          (acc: OperationsByServiceName, operation: OperationQueueElement) => {
+            if (!acc.hasOwnProperty(operation.serviceEndpointDefinition.name)) {
+              acc[operation.serviceEndpointDefinition.name] = [];
+            }
+            acc[operation.serviceEndpointDefinition.name].push(operation);
+            return acc;
+          }, 
+          {} as OperationsByServiceName
+        );
 
         this.queue.length = 0;
   
@@ -49,7 +71,7 @@ module.exports = class GraphQLOperationsQueue {
           //  operation.deferred.resolve(result);
           //}
           if (operationsByEndpointDefinition[serviceName].length > 0) {
-            const batchedOperationsResult = await this.remoteGraphQLBatchedDataSource.process(
+            const batchedOperationsResult: GraphQLResponse[] = await this.remoteGraphQLBatchedDataSource.process(
               operationsByEndpointDefinition[serviceName][0].serviceEndpointDefinition,
               operationsByEndpointDefinition[serviceName].map((operation) => operation.options)
             );

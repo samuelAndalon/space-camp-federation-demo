@@ -8,3 +8,4 @@ node_modules
 ehthumbs.db
 *[Tt]humbs.db
 *.Trashes
+dist
