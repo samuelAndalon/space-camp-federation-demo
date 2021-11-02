@@ -3,6 +3,7 @@ import { Deferred } from './deferred';
 import { RemoteGraphQLBatchedDataSource } from './remote-graphql-batched-datasource';
 import { GraphQLResponse } from 'apollo-server-types';
 import queueMicrotask from 'queue-microtask';
+import { HttpContext } from './http-context';
 
 interface OperationsByServiceName {
   [serviceDefinitionName: string]: OperationQueueElement[]
@@ -10,7 +11,7 @@ interface OperationsByServiceName {
 
 export interface OperationQueueElement {
   serviceEndpointDefinition: ServiceEndpointDefinition,
-  options: GraphQLDataSourceProcessOptions,
+  options: GraphQLDataSourceProcessOptions<HttpContext>,
   deferred: Deferred<GraphQLResponse>
 }
 
@@ -26,7 +27,7 @@ export class GraphQLOperationsQueue {
 
   enqueue(
     serviceEndpointDefinition: ServiceEndpointDefinition, 
-    options: GraphQLDataSourceProcessOptions
+    options: GraphQLDataSourceProcessOptions<HttpContext>
   ): OperationQueueElement {
     const operation: OperationQueueElement = {
       serviceEndpointDefinition,
