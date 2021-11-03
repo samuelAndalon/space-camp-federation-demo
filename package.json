@@ -6,23 +6,26 @@
   "dependencies": {
     "@apollo/federation": "^0.29",
     "@apollo/gateway": "^0.38",
+    "apollo-link-batch-http": "^1",
     "apollo-server": "^3",
     "concurrently": "^5.1.0",
+    "cross-fetch": "^3.1.4",
     "dataloader": "^2.0.0",
     "graphql": "^15.0.0",
     "json-server": "^0.16.1",
-    "node-fetch": "^2.6.0",
+    "nodemon": "^2.0.14",
     "queue-microtask": "^1.2.3",
+    "ts-node": "^10.4.0",
     "tsc-watch": "^4.5.0",
     "typescript": "^4.4.4"
   },
   "devDependencies": {},
   "scripts": {
-    "server": "tsc-watch --onSuccess \"concurrently -k npm:server:*\"",
+    "server": "concurrently -k npm:server:*",
     "server:rest": "json-server -q db.json",
-    "server:astronauts": "node dist/astronauts/astronauts-server.js",
-    "server:mission": "node dist/missions/missions-server.js",
-    "server:graphql": "node dist/index.js"
+    "server:astronauts": "nodemon src/astronauts/astronauts-server.js",
+    "server:mission": "nodemon src/missions/missions-server.js",
+    "server:graphql": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/index.ts"
   },
   "keywords": [],
   "author": "",

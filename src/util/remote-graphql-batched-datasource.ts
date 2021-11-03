@@ -1,32 +1,75 @@
-import { GraphQLDataSourceProcessOptions, ServiceEndpointDefinition } from '@apollo/gateway';
-import { fetch } from 'apollo-server-env';
+import { GraphQLDataSourceProcessOptions, RemoteGraphQLDataSource, ServiceEndpointDefinition } from '@apollo/gateway';
+import { GraphQLDataSourceRequestKind } from '@apollo/gateway/dist/datasources/types';
+import { ApolloLink } from 'apollo-link';
 import { GraphQLResponse } from 'apollo-server-types';
+import { CustomBatchHttpLink } from './custom-apollo-link-batch';
 import { HttpContext } from './http-context';
+import { execute, makePromise, GraphQLRequest } from 'apollo-link';
+import { parse } from 'graphql';
+import { BatchableRequest } from 'apollo-link-batch';
+import { HttpOptions } from 'apollo-link-http-common';
+import fetch from 'cross-fetch';
 
-export class RemoteGraphQLBatchedDataSource {
+export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<HttpContext> {
 
-  fetcher: typeof fetch = fetch;
+  serviceEndpointDefinition: ServiceEndpointDefinition;
+  link: ApolloLink;
+
+  constructor(
+    getQueueCallback: (context: HttpContext) => BatchableRequest[],
+    serviceEndpointDefinition: ServiceEndpointDefinition,
+    links: ApolloLink[]
+  ) {
+    super(serviceEndpointDefinition);
+    this.serviceEndpointDefinition = serviceEndpointDefinition;
+    this.link = ApolloLink.from([
+      ...links, 
+      new CustomBatchHttpLink({
+        getQueueCallback,
+        fetch
+      })
+    ]);
+  }
 
   async process(
-    serviceEndpointDefinition: ServiceEndpointDefinition, 
-    options: GraphQLDataSourceProcessOptions<HttpContext>[]
-  ): Promise<GraphQLResponse[]> {
-    const { url } = serviceEndpointDefinition;
-    if(!url) {
-      return Promise.resolve([]);
+    options: GraphQLDataSourceProcessOptions<HttpContext>
+  ): Promise<GraphQLResponse> {
+    if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
+      // console.log(`gateway query planner request: ${JSON.stringify(options.request, null, 2)}`);
+      const request = options.request;
+      const query = request.query;
+
+      if (!query) {
+        return Promise.resolve({});
+      }
+
+      const context: Record<string, any> & HttpOptions = {
+        serviceEndpointDefinition: this.serviceEndpointDefinition, 
+        requestContext: options.context,
+        operationContext: options.incomingRequestContext,
+        uri: request?.http?.url,
+        headers: request?.http?.headers,
+        fetchOptions: {
+          method: request?.http?.method || 'POST'
+        }
+      };
+
+      const operation: GraphQLRequest = {
+        context,
+        extensions: request.extensions,
+        operationName: request.operationName,
+        query: parse(query),
+        variables: request.variables
+      };
+
+      return makePromise(
+        execute(
+          this.link, 
+          operation
+         )
+      );
+    } else {
+      return super.process(options);
     }
-    const fetchResponse = await this.fetcher(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(options.map((option: GraphQLDataSourceProcessOptions<HttpContext>) => option.request))
-    });
-    const body = await fetchResponse.json();
-    return body;
   }
-  // requests: GraphQLRequest[]
-  // returns Promise<GraphQLResponse[]>
-  // async sendRequest(requests) { 
-  // }
 }

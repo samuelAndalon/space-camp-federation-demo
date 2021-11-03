@@ -1,5 +1,5 @@
-import { GraphQLOperationsQueue } from "./graphql-operations-queue";
+import { BatchableRequest } from 'apollo-link-batch';
 
 export interface HttpContext {
-  graphQLOperationsQueue: GraphQLOperationsQueue
+  batcheableRequestsQueue: BatchableRequest[]
 }
