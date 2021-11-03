@@ -1,43 +1,38 @@
+import { ServiceEndpointDefinition } from '@apollo/gateway';
 import { ApolloLink, FetchResult, NextLink, Observable, Operation } from 'apollo-link';
 import { BatchHandler, BatchableRequest } from 'apollo-link-batch';
 import { CustomOperationBatcher } from './custom-batching';
+import { GraphQLRequestContext } from 'apollo-server-types';
 
 export namespace CustomBatchLink {
   export interface Options {
     /**
      * The handler that should execute a batch of operations.
      */
-    batchHandler?: BatchHandler;
+    batchHandler: BatchHandler;
 
      /**
      * callback that passes the request context of request and should return a queue
      */
-    getQueueCallback: (context: any) => BatchableRequest[]
-
-    /**
-     * creates the key for a batch
-     */
-    batchKey?: (operation: Operation) => string;
+    getQueue: (context: GraphQLRequestContext) => BatchableRequest[]
   }
 }
 
 export class CustomBatchLink extends ApolloLink {
-  private getQueueCallback: (context) => BatchableRequest[]
+  private getQueue: (context) => BatchableRequest[]
   private batcher: CustomOperationBatcher;
 
   constructor(fetchParams: CustomBatchLink.Options) {
     super();
 
     const {
-      batchHandler = () => null, 
-      getQueueCallback,
-      batchKey = (operation: Operation) => operation.getContext()?.serviceEndpointDefinition?.name || '',
+      batchHandler, 
+      getQueue
     } = fetchParams;
 
-    this.getQueueCallback = getQueueCallback;
+    this.getQueue = getQueue;
     this.batcher = new CustomOperationBatcher({
-      batchHandler,
-      batchKey
+      batchHandler
     });
   }
 
@@ -46,11 +41,8 @@ export class CustomBatchLink extends ApolloLink {
     forward?: NextLink,
   ): Observable<FetchResult> | null {
     return this.batcher.enqueueRequest(
-      {
-        operation,
-        forward
-      },
-      this.getQueueCallback(operation.getContext().requestContext)
+      { operation, forward },
+      this.getQueue(operation.getContext().operationContext)
     );
   }
 }

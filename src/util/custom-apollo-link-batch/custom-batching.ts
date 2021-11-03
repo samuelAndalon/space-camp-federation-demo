@@ -1,21 +1,17 @@
+import { ServiceEndpointDefinition } from '@apollo/gateway';
 import { FetchResult, Observable, Operation } from 'apollo-link';
 import { BatchableRequest, BatchHandler } from 'apollo-link-batch';
 import queueMicrotask from 'queue-microtask';
 
 export class CustomOperationBatcher {
-  //This function is called to the queries in the queue to the server.
   private batchHandler: BatchHandler;
-  private batchKey: (operation: Operation) => string;
 
   constructor({ 
-    batchHandler,
-    batchKey
+    batchHandler
   }: { 
     batchHandler: BatchHandler;
-    batchKey?: (operation: Operation) => string;
   }) {
     this.batchHandler = batchHandler;
-    this.batchKey = batchKey || ((operation: Operation) => operation.getContext()?.serviceDefinition?.name || '');
   }
 
   public enqueueRequest(
@@ -71,7 +67,7 @@ export class CustomOperationBatcher {
 
     const associatedRequests: Map<string, BatchableRequest[]> = 
       queue.reduce((accumulator: Map<string, BatchableRequest[]>, request: BatchableRequest) => {
-        const key = this.batchKey(request.operation);
+        const key = request.operation.getContext().url;
         if (!accumulator.has(key)) {
           accumulator.set(key, []);
         }

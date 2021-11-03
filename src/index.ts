@@ -4,6 +4,7 @@ import { BatchableRequest } from 'apollo-link-batch';
 import { ApolloServer } from 'apollo-server';
 import { ExpressContext } from 'apollo-server-express/dist/ApolloServer';
 import { HttpContext, RemoteGraphQLBatchedDataSource } from './util';
+import { GraphQLRequestContext } from 'apollo-server-types';
 
 const port = 4000;
 
@@ -13,7 +14,7 @@ const gateway = new ApolloGateway({
     { name: 'missions', url: 'http://localhost:4002' }
   ],
   buildService: (definition: ServiceEndpointDefinition) => new RemoteGraphQLBatchedDataSource(
-    (context: HttpContext): BatchableRequest[] => context.batcheableRequestsQueue,
+    (requestContext: GraphQLRequestContext): BatchableRequest[] => requestContext.context.batcheableRequestsQueue,
     definition,
     [
       new ApolloLink((operation, forward) => {

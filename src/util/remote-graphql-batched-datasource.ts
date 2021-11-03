@@ -1,7 +1,7 @@
 import { GraphQLDataSourceProcessOptions, RemoteGraphQLDataSource, ServiceEndpointDefinition } from '@apollo/gateway';
 import { GraphQLDataSourceRequestKind } from '@apollo/gateway/dist/datasources/types';
 import { ApolloLink } from 'apollo-link';
-import { GraphQLResponse } from 'apollo-server-types';
+import { GraphQLResponse, GraphQLRequestContext } from 'apollo-server-types';
 import { CustomBatchHttpLink } from './custom-apollo-link-batch';
 import { HttpContext } from './http-context';
 import { execute, makePromise, GraphQLRequest } from 'apollo-link';
@@ -12,20 +12,18 @@ import fetch from 'cross-fetch';
 
 export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<HttpContext> {
 
-  serviceEndpointDefinition: ServiceEndpointDefinition;
   link: ApolloLink;
 
   constructor(
-    getQueueCallback: (context: HttpContext) => BatchableRequest[],
+    getQueue: (requestContext: GraphQLRequestContext) => BatchableRequest[],
     serviceEndpointDefinition: ServiceEndpointDefinition,
     links: ApolloLink[]
   ) {
     super(serviceEndpointDefinition);
-    this.serviceEndpointDefinition = serviceEndpointDefinition;
     this.link = ApolloLink.from([
       ...links, 
       new CustomBatchHttpLink({
-        getQueueCallback,
+        getQueue,
         fetch
       })
     ]);
@@ -44,10 +42,8 @@ export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<Http
       }
 
       const context: Record<string, any> & HttpOptions = {
-        serviceEndpointDefinition: this.serviceEndpointDefinition, 
-        requestContext: options.context,
         operationContext: options.incomingRequestContext,
-        uri: request?.http?.url,
+        url: this.url,
         headers: request?.http?.headers,
         fetchOptions: {
           method: request?.http?.method || 'POST'
@@ -62,12 +58,7 @@ export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<Http
         variables: request.variables
       };
 
-      return makePromise(
-        execute(
-          this.link, 
-          operation
-         )
-      );
+      return makePromise(execute(this.link, operation));
     } else {
       return super.process(options);
     }

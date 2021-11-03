@@ -1,3 +1,4 @@
+import { ServiceEndpointDefinition } from '@apollo/gateway';
 import { ApolloLink, FetchResult, fromError, Observable, Operation } from 'apollo-link';
 import { BatchableRequest } from 'apollo-link-batch';
 import {
@@ -6,17 +7,14 @@ import {
   selectHttpOptionsAndBody, selectURI, serializeFetchParameter
 } from 'apollo-link-http-common';
 import { CustomBatchLink } from './custom-batch-link';
+import { GraphQLRequestContext } from 'apollo-server-types';
 
 export namespace CustomBatchHttpLink {
   export interface Options extends HttpOptions {
     /**
      * callback that passes the request context of request and should return a queue
      */
-    getQueueCallback: (context) => BatchableRequest[]
-    /**
-     * Sets the key for an Operation, which specifies the batch an operation is included in
-     */
-    batchKey?: (operation: Operation) => string;
+    getQueue: (requestContext: GraphQLRequestContext) => BatchableRequest[]
   }
 }
 
@@ -32,11 +30,9 @@ export class CustomBatchHttpLink extends ApolloLink {
     let {
       uri = '/graphql',
       includeExtensions,
-      getQueueCallback,
-      batchKey,
+      getQueue,
       ...requestOptions
     } = fetchParams || ({} as CustomBatchHttpLink.Options);
-
 
     // dev warnings to ensure fetch is present
     checkFetcher(fetcher);
@@ -49,12 +45,8 @@ export class CustomBatchHttpLink extends ApolloLink {
     };
 
     const batchHandler = (operations: Operation[]): Observable<FetchResult[]> => {
-      const chosenURI = selectURI(
-        operations[0], 
-        (operation: Operation) => operation.getContext().serviceEndpointDefinition.url
-      );
-
       const context = operations[0].getContext();
+      const chosenURI = context.url;
 
       const clientAwarenessHeaders = new Map<string, any>();
       if (context.clientAwareness) {
@@ -91,6 +83,12 @@ export class CustomBatchHttpLink extends ApolloLink {
       if (options.method === 'GET') {
         return fromError<FetchResult[]>(
           new Error('apollo-link-batch-http does not support GET requests'),
+        );
+      }
+
+      if (!chosenURI) {
+        return fromError<FetchResult[]>(
+          new Error('apollo-link-batch-http needs a URL'),
         );
       }
 
@@ -138,8 +136,7 @@ export class CustomBatchHttpLink extends ApolloLink {
 
     this.batcher = new CustomBatchLink({
       batchHandler,
-      getQueueCallback,
-      batchKey
+      getQueue
     });
   }
 
