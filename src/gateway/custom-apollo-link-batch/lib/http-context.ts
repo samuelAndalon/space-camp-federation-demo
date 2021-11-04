@@ -1,4 +1,4 @@
-import { CustomOperationBatcher } from './custom-apollo-link-batch';
+import { CustomOperationBatcher } from './custom-operation-batcher';
 
 export interface HttpContext {
   operationBatcher: CustomOperationBatcher

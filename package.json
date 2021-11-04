@@ -21,11 +21,20 @@
   },
   "devDependencies": {},
   "scripts": {
-    "server": "concurrently -k npm:server:*",
+    "server-datasource": "concurrently -k npm:server:* npm:server-gateway-datasource",
+    "server-gateway-datasource": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/remote-graphql-datasource/server.ts",
+
+    "server-batch-datasource": "concurrently -k npm:server:* npm:server-gateway-batch-datasource",
+    "server-gateway-batch-datasource": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/remote-graphql-batch-datasource/server.ts",
+    
+    "server-batch-apollo-link": "concurrently -k npm:server:* npm:server-gateway-batch-apollo-link",
+    "server-gateway-batch-apollo-link": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/custom-apollo-link-batch/server.ts",
+
+
     "server:rest": "json-server -q db.json",
     "server:astronauts": "nodemon src/astronauts/astronauts-server.js",
-    "server:mission": "nodemon src/missions/missions-server.js",
-    "server:graphql": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/index.ts"
+    "server:mission": "nodemon src/missions/missions-server.js"
+
   },
   "keywords": [],
   "author": "",

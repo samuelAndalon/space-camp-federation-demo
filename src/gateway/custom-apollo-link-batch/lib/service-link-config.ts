@@ -14,7 +14,7 @@ export const getDefaultLinks = (
       const start = operation.getContext().start as Date;
       const now = new Date();
       const time = now.getTime() - start.getTime();
-      // console.log(`operation ${operation.query.loc?.source?.body}: ${JSON.stringify(operation.variables)} to service: ${serviceEndpointDefinition.name} took ${time} ms to complete`);
+      console.log(`operation ${operation.query.loc?.source?.body}: ${JSON.stringify(operation.variables)} to service: ${serviceEndpointDefinition.name} took ${time} ms to complete`);
       return data;
     })
   })

@@ -70,7 +70,7 @@ export class CustomOperationBatcher {
     this.batcheableRequestsQueue.length = 0;
 
     console.log('dispatching requestsQueue');
-    Array.from(associatedRequests.entries()).forEach(entry => console.log(`key: ${entry[0]}, # operations: ${entry[1].length}`))
+    Array.from(associatedRequests.entries()).forEach(entry => console.log(`key: ${entry[0]}, # operations: ${entry[1].length}`));
 
     const observables: (Observable<FetchResult> | undefined)[] = [];
     

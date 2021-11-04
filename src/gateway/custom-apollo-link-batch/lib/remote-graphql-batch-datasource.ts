@@ -6,7 +6,7 @@ import { GraphQLResponse } from 'apollo-server-types';
 import { parse } from 'graphql';
 import { HttpContext } from './http-context';
 
-export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<HttpContext> {
+export class RemoteGraphQLBatchDataSource extends RemoteGraphQLDataSource<HttpContext> {
 
   private readonly link: ApolloLink;
 
