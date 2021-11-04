@@ -80,10 +80,10 @@ export class CustomOperationBatcher {
       const errors: any[] = [];
       const completes: any[] = [];
 
-      requests.forEach((batchableRequest) => {
-        nexts.push(batchableRequest.next);
-        errors.push(batchableRequest.error);
-        completes.push(batchableRequest.complete);
+      requests.forEach((request: BatchableRequest) => {
+        nexts.push(request.next);
+        errors.push(request.error);
+        completes.push(request.complete);
       });
       
       const batchHandler: BatchHandler | undefined = this.batchHandlers.get(name);
@@ -100,7 +100,7 @@ export class CustomOperationBatcher {
       };
   
       batchResultsObservable.subscribe({
-        next: results => {
+        next: (results: FetchResult[]) => {
           if (!Array.isArray(results)) {
             results = [results];
           }
