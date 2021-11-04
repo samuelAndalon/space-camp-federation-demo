@@ -17,6 +17,7 @@ export class CustomOperationBatcher {
     batchHandler: BatchHandler
   ): Observable<FetchResult> {
     this.addBatchHandler(batchHandler, request.operation.getContext().url);
+
     const requestCopy = {
       ...request,
     };
@@ -52,7 +53,7 @@ export class CustomOperationBatcher {
     return requestCopy.observable;
   }
 
-  public consumeQueue(): (Observable<FetchResult> | undefined)[] | undefined {
+  public consumeQueue() {
     if (!this.batcheableRequestsQueue) {
       return;
     }
@@ -71,26 +72,22 @@ export class CustomOperationBatcher {
 
     console.log('dispatching requestsQueue');
     Array.from(associatedRequests.entries()).forEach(entry => console.log(`key: ${entry[0]}, # operations: ${entry[1].length}`));
-
-    const observables: (Observable<FetchResult> | undefined)[] = [];
     
     for (const [name, requests] of associatedRequests) {
       const operations: Operation[] = requests.map((request: BatchableRequest) => request.operation);
-      // const forwards: NextLink[] = requests.map((request: BatchableRequest) => request.forward);
   
       const nexts: any[] = [];
       const errors: any[] = [];
       const completes: any[] = [];
 
       requests.forEach((batchableRequest) => {
-        observables.push(batchableRequest.observable);
         nexts.push(batchableRequest.next);
         errors.push(batchableRequest.error);
         completes.push(batchableRequest.complete);
       });
       
-      const batchHandler = this.batchHandlers.get(name);
-      const batchedObservable = batchHandler?.(operations) || Observable.of();
+      const batchHandler: BatchHandler | undefined = this.batchHandlers.get(name);
+      const batchResultsObservable = batchHandler?.(operations) || Observable.of();
   
       const onError = error => {
         //each callback list in batch
@@ -102,7 +99,7 @@ export class CustomOperationBatcher {
         });
       };
   
-      batchedObservable.subscribe({
+      batchResultsObservable.subscribe({
         next: results => {
           if (!Array.isArray(results)) {
             results = [results];
@@ -136,7 +133,5 @@ export class CustomOperationBatcher {
         },
       });
     }
-
-    return observables;
   }
 }

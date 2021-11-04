@@ -58,6 +58,8 @@ export class GraphQLOperationsBatcher {
     console.log('dispatching requestsQueue');
     Array.from(associatedRequests.entries()).forEach(entry => console.log(`key: ${entry[0]}, # operations: ${entry[1].length}`));
 
+    /*
+    // Can improve this to resolve batches concurrently instead of sequentially.
     for(const [serviceName, operations] of associatedRequests) {
       const batchedOperationsResult: GraphQLResponse[] = await this.graphqlOperationBatchHandler.handle(
         operations[0].serviceEndpointDefinition,
@@ -67,5 +69,25 @@ export class GraphQLOperationsBatcher {
         operation.deferred.resolve(batchedOperationsResult[index]);
       });
     }
+    */
+
+    let promises: Promise<GraphQLResponse[]>[] = [];
+
+    for (const [serviceName, operations] of associatedRequests) {
+      promises = [
+        ...promises, 
+        this.graphqlOperationBatchHandler.handle(
+          operations[0].serviceEndpointDefinition,
+          operations.map((operation) => operation.options)
+        )
+      ];
+    }
+
+    const operations = ([] as BatcheableOperation[]).concat(...Array.from(associatedRequests.values()));
+    const responses = ([] as GraphQLResponse[]).concat(...await Promise.all(promises));
+
+    operations.forEach((operation: BatcheableOperation, index: number) => {
+      operation.deferred.resolve(responses[index]);
+    });
   }
 }
