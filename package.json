@@ -6,23 +6,35 @@
   "dependencies": {
     "@apollo/federation": "^0.29",
     "@apollo/gateway": "^0.38",
+    "apollo-link-batch-http": "^1",
     "apollo-server": "^3",
     "concurrently": "^5.1.0",
+    "cross-fetch": "^3.1.4",
     "dataloader": "^2.0.0",
     "graphql": "^15.0.0",
     "json-server": "^0.16.1",
-    "node-fetch": "^2.6.0",
+    "nodemon": "^2.0.14",
     "queue-microtask": "^1.2.3",
+    "ts-node": "^10.4.0",
     "tsc-watch": "^4.5.0",
     "typescript": "^4.4.4"
   },
   "devDependencies": {},
   "scripts": {
-    "server": "tsc-watch --onSuccess \"concurrently -k npm:server:*\"",
+    "server-datasource": "concurrently -k npm:server:* npm:server-gateway-datasource",
+    "server-gateway-datasource": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/remote-graphql-datasource/server.ts",
+
+    "server-batch-datasource": "concurrently -k npm:server:* npm:server-gateway-batch-datasource",
+    "server-gateway-batch-datasource": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/remote-graphql-batch-datasource/server.ts",
+    
+    "server-batch-apollo-link": "concurrently -k npm:server:* npm:server-gateway-batch-apollo-link",
+    "server-gateway-batch-apollo-link": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/custom-apollo-link-batch/server.ts",
+
+
     "server:rest": "json-server -q db.json",
-    "server:astronauts": "node dist/astronauts/astronauts-server.js",
-    "server:mission": "node dist/missions/missions-server.js",
-    "server:graphql": "node dist/index.js"
+    "server:astronauts": "nodemon src/astronauts/astronauts-server.js",
+    "server:mission": "nodemon src/missions/missions-server.js"
+
   },
   "keywords": [],
   "author": "",

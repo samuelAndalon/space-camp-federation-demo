@@ -15,7 +15,7 @@ export class RemoteGraphQLDataSourceDecorator extends RemoteGraphQLDataSource<Ht
   async process(options: GraphQLDataSourceProcessOptions<HttpContext>): Promise<GraphQLResponse> {
     if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
       console.log(`request from gateway: ${JSON.stringify(options.request, null, 2)}`);
-      const request = options.context.graphQLOperationsQueue.enqueue(
+      const request = options.context.graphQLOperationsBatcher.enqueue(
         this.serviceEndpointDefinition,
         options
       );

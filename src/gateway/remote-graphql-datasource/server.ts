@@ -1,9 +1,9 @@
 import { ApolloGateway, ServiceEndpointDefinition } from '@apollo/gateway';
 import { ApolloServer } from 'apollo-server';
 import { ExpressContext } from 'apollo-server-express/dist/ApolloServer';
-import { GraphQLOperationsQueue, HttpContext, RemoteGraphQLDataSourceDecorator } from './util';
+import { HttpContext, RemoteGraphQLDataSourceDecorator } from './lib';
 
-const port = 4000;
+const port = 4000; 
 
 const gateway = new ApolloGateway({ 
   serviceList: [
@@ -15,9 +15,7 @@ const gateway = new ApolloGateway({
 
 const server = new ApolloServer({
   gateway,
-  context: (_: ExpressContext): HttpContext => ({
-    graphQLOperationsQueue: new GraphQLOperationsQueue()
-  }) 
+  context: (_: ExpressContext): HttpContext => ({})
 });
 
 server.listen({ port }).then(({ url }) => {

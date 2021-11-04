@@ -1,13 +1,13 @@
 import { GraphQLDataSourceProcessOptions, ServiceEndpointDefinition } from '@apollo/gateway';
-import { fetch } from 'apollo-server-env';
-import { GraphQLResponse } from 'apollo-server-types';
 import { HttpContext } from './http-context';
+import { GraphQLResponse } from 'apollo-server-types';
+import fetch from 'cross-fetch';
 
-export class RemoteGraphQLBatchedDataSource {
+export class GraphQLOperationBatchHandler {
 
   fetcher: typeof fetch = fetch;
 
-  async process(
+  public async handle(
     serviceEndpointDefinition: ServiceEndpointDefinition, 
     options: GraphQLDataSourceProcessOptions<HttpContext>[]
   ): Promise<GraphQLResponse[]> {
@@ -20,13 +20,11 @@ export class RemoteGraphQLBatchedDataSource {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(options.map((option: GraphQLDataSourceProcessOptions<HttpContext>) => option.request))
+      body: JSON.stringify(
+        options.map((option: GraphQLDataSourceProcessOptions<HttpContext>) => option.request)
+      )
     });
     const body = await fetchResponse.json();
     return body;
   }
-  // requests: GraphQLRequest[]
-  // returns Promise<GraphQLResponse[]>
-  // async sendRequest(requests) { 
-  // }
 }
