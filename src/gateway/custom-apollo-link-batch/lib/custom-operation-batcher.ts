@@ -76,14 +76,21 @@ export class CustomOperationBatcher {
     for (const [name, requests] of associatedRequests) {
       const operations: Operation[] = requests.map((request: BatchableRequest) => request.operation);
   
-      const nexts: any[] = [];
-      const errors: any[] = [];
-      const completes: any[] = [];
+      const nexts: Array<(result: FetchResult) => void>[] = [];
+      const errors: Array<(error: Error) => void>[] = [];
+      const completes: Array<() => void>[] = [];
 
       requests.forEach((request: BatchableRequest) => {
-        nexts.push(request.next);
-        errors.push(request.error);
-        completes.push(request.complete);
+        const { next, error, complete } = request;
+        if (next) {
+          nexts.push(next);
+        }
+        if (error) {
+          errors.push(error);
+        }
+        if (complete) {
+          completes.push(complete);
+        }
       });
       
       const batchHandler: BatchHandler | undefined = this.batchHandlers.get(name);
