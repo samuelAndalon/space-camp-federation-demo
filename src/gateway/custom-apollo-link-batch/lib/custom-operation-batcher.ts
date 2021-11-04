@@ -32,7 +32,8 @@ export class CustomOperationBatcher {
 
         //called for each subscriber, so need to save all listeners(next, error, complete)
         requestCopy.next = requestCopy.next || [];
-        if (observer.next) requestCopy.next.push(observer.next.bind(observer));
+        if (observer.next) 
+          requestCopy.next.push(observer.next.bind(observer));
 
         requestCopy.error = requestCopy.error || [];
         if (observer.error)
@@ -54,6 +55,7 @@ export class CustomOperationBatcher {
   }
 
   public consumeQueue() {
+
     if (!this.batcheableRequestsQueue) {
       return;
     }
@@ -94,7 +96,7 @@ export class CustomOperationBatcher {
       });
       
       const batchHandler: BatchHandler | undefined = this.batchHandlers.get(name);
-      const batchResultsObservable = batchHandler?.(operations) || Observable.of();
+      const batchResultsObservable: Observable<FetchResult[]> = batchHandler?.(operations) || Observable.of();
   
       const onError = error => {
         //each callback list in batch
@@ -107,11 +109,8 @@ export class CustomOperationBatcher {
       };
   
       batchResultsObservable.subscribe({
+        error: onError,
         next: (results: FetchResult[]) => {
-          if (!Array.isArray(results)) {
-            results = [results];
-          }
-  
           if (nexts.length !== results.length) {
             const error = new Error(
               `server returned results with length ${
@@ -119,21 +118,17 @@ export class CustomOperationBatcher {
               }, expected length of ${nexts.length}`,
             );
             (error as any).result = results;
-  
             return onError(error);
           }
-  
           results.forEach((result, index) => {
             if (nexts[index]) {
               nexts[index].forEach(next => next(result));
             }
           });
         },
-        error: onError,
         complete: () => {
           completes.forEach(complete => {
             if (complete) {
-              //each subscriber to request
               complete.forEach(c => c());
             }
           });
