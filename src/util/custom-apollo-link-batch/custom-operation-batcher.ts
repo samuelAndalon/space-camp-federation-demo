@@ -1,24 +1,22 @@
-import { ServiceEndpointDefinition } from '@apollo/gateway';
 import { FetchResult, Observable, Operation } from 'apollo-link';
 import { BatchableRequest, BatchHandler } from 'apollo-link-batch';
 import queueMicrotask from 'queue-microtask';
 
 export class CustomOperationBatcher {
-  private batchHandler: BatchHandler;
+  private batchHandlers: Map<string, BatchHandler> = new Map();
+  private batcheableRequestsQueue: BatchableRequest[] = [];
 
-  constructor({ 
-    batchHandler
-  }: { 
-    batchHandler: BatchHandler;
-  }) {
-    this.batchHandler = batchHandler;
+  private addBatchHandler(batchHandler: BatchHandler, name?: string) {
+    if (name && !this.batchHandlers.has(name)) {
+      this.batchHandlers.set(name, batchHandler);
+    }
   }
 
-  public enqueueRequest(
-    request: BatchableRequest,
-    batcheableRequestsQueue: BatchableRequest[]
+  public enqueue(
+    request: BatchableRequest, 
+    batchHandler: BatchHandler
   ): Observable<FetchResult> {
-
+    this.addBatchHandler(batchHandler, request.operation.getContext().url);
     const requestCopy = {
       ...request,
     };
@@ -27,7 +25,7 @@ export class CustomOperationBatcher {
     if (!requestCopy.observable) {
       requestCopy.observable = new Observable<FetchResult>(observer => {
         if (!queued) {
-          batcheableRequestsQueue.push(requestCopy);
+          this.batcheableRequestsQueue.push(requestCopy);
           queued = true;
         }
 
@@ -43,9 +41,9 @@ export class CustomOperationBatcher {
         if (observer.complete)
           requestCopy.complete.push(observer.complete.bind(observer));
 
-        if (batcheableRequestsQueue.length === 1) {
+        if (this.batcheableRequestsQueue.length === 1) {
           queueMicrotask(() => {
-            this.consumeQueue(batcheableRequestsQueue);
+            this.consumeQueue();
           });
         }
       });
@@ -54,19 +52,13 @@ export class CustomOperationBatcher {
     return requestCopy.observable;
   }
 
-  // Consumes the queue.
-  // Returns a list of promises (one for each query).
-  public consumeQueue(
-    batcheableRequestsQueue: BatchableRequest[]
-  ): (Observable<FetchResult> | undefined)[] | undefined {
-    const queue: BatchableRequest[] = batcheableRequestsQueue;
-
-    if (!queue) {
+  public consumeQueue(): (Observable<FetchResult> | undefined)[] | undefined {
+    if (!this.batcheableRequestsQueue) {
       return;
     }
 
     const associatedRequests: Map<string, BatchableRequest[]> = 
-      queue.reduce((accumulator: Map<string, BatchableRequest[]>, request: BatchableRequest) => {
+      this.batcheableRequestsQueue.reduce((accumulator: Map<string, BatchableRequest[]>, request: BatchableRequest) => {
         const key = request.operation.getContext().url;
         if (!accumulator.has(key)) {
           accumulator.set(key, []);
@@ -75,14 +67,14 @@ export class CustomOperationBatcher {
         return accumulator;
       }, new Map<string, BatchableRequest[]>());
 
-    batcheableRequestsQueue.length = 0;
+    this.batcheableRequestsQueue.length = 0;
 
     console.log('dispatching requestsQueue');
     Array.from(associatedRequests.entries()).forEach(entry => console.log(`key: ${entry[0]}, # operations: ${entry[1].length}`))
 
     const observables: (Observable<FetchResult> | undefined)[] = [];
     
-    for (const [_, requests] of associatedRequests) {
+    for (const [name, requests] of associatedRequests) {
       const operations: Operation[] = requests.map((request: BatchableRequest) => request.operation);
       // const forwards: NextLink[] = requests.map((request: BatchableRequest) => request.forward);
   
@@ -96,8 +88,9 @@ export class CustomOperationBatcher {
         errors.push(batchableRequest.error);
         completes.push(batchableRequest.complete);
       });
-  
-      const batchedObservable = this.batchHandler(operations) || Observable.of();
+      
+      const batchHandler = this.batchHandlers.get(name);
+      const batchedObservable = batchHandler?.(operations) || Observable.of();
   
       const onError = error => {
         //each callback list in batch

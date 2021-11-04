@@ -1,5 +1,5 @@
-import { BatchableRequest } from 'apollo-link-batch';
+import { CustomOperationBatcher } from './custom-apollo-link-batch';
 
 export interface HttpContext {
-  batcheableRequestsQueue: BatchableRequest[]
+  operationBatcher: CustomOperationBatcher
 }

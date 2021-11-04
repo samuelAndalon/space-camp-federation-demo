@@ -1,32 +1,21 @@
 import { GraphQLDataSourceProcessOptions, RemoteGraphQLDataSource, ServiceEndpointDefinition } from '@apollo/gateway';
 import { GraphQLDataSourceRequestKind } from '@apollo/gateway/dist/datasources/types';
-import { ApolloLink } from 'apollo-link';
-import { GraphQLResponse, GraphQLRequestContext } from 'apollo-server-types';
-import { CustomBatchHttpLink } from './custom-apollo-link-batch';
-import { HttpContext } from './http-context';
-import { execute, makePromise, GraphQLRequest } from 'apollo-link';
-import { parse } from 'graphql';
-import { BatchableRequest } from 'apollo-link-batch';
+import { ApolloLink, execute, GraphQLRequest, makePromise } from 'apollo-link';
 import { HttpOptions } from 'apollo-link-http-common';
-import fetch from 'cross-fetch';
+import { GraphQLResponse } from 'apollo-server-types';
+import { parse } from 'graphql';
+import { HttpContext } from './http-context';
 
 export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<HttpContext> {
 
-  link: ApolloLink;
+  private readonly link: ApolloLink;
 
   constructor(
-    getQueue: (requestContext: GraphQLRequestContext) => BatchableRequest[],
     serviceEndpointDefinition: ServiceEndpointDefinition,
     links: ApolloLink[]
   ) {
     super(serviceEndpointDefinition);
-    this.link = ApolloLink.from([
-      ...links, 
-      new CustomBatchHttpLink({
-        getQueue,
-        fetch
-      })
-    ]);
+    this.link = ApolloLink.from(links);
   }
 
   async process(
@@ -42,12 +31,12 @@ export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<Http
       }
 
       const context: Record<string, any> & HttpOptions = {
-        operationContext: options.incomingRequestContext,
         url: this.url,
         headers: request?.http?.headers,
         fetchOptions: {
           method: request?.http?.method || 'POST'
-        }
+        },
+        operationContext: options.incomingRequestContext
       };
 
       const operation: GraphQLRequest = {
@@ -59,6 +48,7 @@ export class RemoteGraphQLBatchedDataSource extends RemoteGraphQLDataSource<Http
       };
 
       return makePromise(execute(this.link, operation));
+
     } else {
       return super.process(options);
     }

@@ -1,25 +1,25 @@
-import { ServiceEndpointDefinition } from '@apollo/gateway';
 import { ApolloLink, FetchResult, fromError, Observable, Operation } from 'apollo-link';
-import { BatchableRequest } from 'apollo-link-batch';
 import {
-  fallbackHttpConfig,
-  HttpOptions, parseAndCheckHttpResponse, checkFetcher,
-  selectHttpOptionsAndBody, selectURI, serializeFetchParameter
+  checkFetcher,
+  createSignalIfSupported, fallbackHttpConfig,
+  HttpOptions, parseAndCheckHttpResponse,
+  selectHttpOptionsAndBody, serializeFetchParameter
 } from 'apollo-link-http-common';
-import { CustomBatchLink } from './custom-batch-link';
 import { GraphQLRequestContext } from 'apollo-server-types';
+import { CustomOperationBatcher } from './custom-operation-batcher';
 
 export namespace CustomBatchHttpLink {
   export interface Options extends HttpOptions {
     /**
-     * callback that passes the request context of request and should return a queue
+     * callback that passes the request context of request and should return the CustomOperationBatcher
      */
-    getQueue: (requestContext: GraphQLRequestContext) => BatchableRequest[]
+    getOperationBatcher: (requestContext: GraphQLRequestContext) => CustomOperationBatcher
   }
 }
 
 export class CustomBatchHttpLink extends ApolloLink {
-  private batcher: CustomBatchLink;
+  private batchHandler: (operations: Operation[]) => Observable<FetchResult[]>;
+  private getOperationBatcher: (requestContext: GraphQLRequestContext) => CustomOperationBatcher
 
   constructor(fetchParams?: CustomBatchHttpLink.Options) {
     super();
@@ -28,9 +28,8 @@ export class CustomBatchHttpLink extends ApolloLink {
     const fetcher = fetchParams?.fetch ? fetchParams.fetch : fetch;
 
     let {
-      uri = '/graphql',
       includeExtensions,
-      getQueue,
+      getOperationBatcher,
       ...requestOptions
     } = fetchParams || ({} as CustomBatchHttpLink.Options);
 
@@ -44,7 +43,8 @@ export class CustomBatchHttpLink extends ApolloLink {
       headers: requestOptions.headers
     };
 
-    const batchHandler = (operations: Operation[]): Observable<FetchResult[]> => {
+    this.getOperationBatcher = getOperationBatcher;
+    this.batchHandler = (operations: Operation[]): Observable<FetchResult[]> => {
       const context = operations[0].getContext();
       const chosenURI = context.url;
 
@@ -98,12 +98,12 @@ export class CustomBatchHttpLink extends ApolloLink {
         return fromError<FetchResult[]>(parseError);
       }
 
-      // let controller;
-      // if (!(options as any).signal) {
-      //   const { controller: _controller, signal } = createSignalIfSupported();
-      //   controller = _controller;
-      //   if (controller) (options as any).signal = signal;
-      // }
+      let controller;
+      if (!(options as any).signal) {
+        const { controller: _controller, signal } = createSignalIfSupported();
+        controller = _controller;
+        if (controller) (options as any).signal = signal;
+      }
 
       return new Observable<FetchResult[]>(observer => {
         fetcher(chosenURI, options)
@@ -126,21 +126,20 @@ export class CustomBatchHttpLink extends ApolloLink {
             observer.error(err);
           });
 
-        // return () => {
-        //   // XXX support canceling this request
-        //   // https://developers.google.com/web/updates/2017/09/abortable-fetch
-        //   if (controller) controller.abort();
-        // };
+        return () => {
+          // XXX support canceling this request
+          // https://developers.google.com/web/updates/2017/09/abortable-fetch
+          if (controller) controller.abort();
+        };
       });
     };
-
-    this.batcher = new CustomBatchLink({
-      batchHandler,
-      getQueue
-    });
   }
 
   public request(operation: Operation): Observable<FetchResult> | null {
-    return this.batcher.request(operation);
+    const operationBatcher = this.getOperationBatcher(operation.getContext().operationContext);
+    if(!operationBatcher) {
+      return null;
+    }
+    return operationBatcher.enqueue({ operation }, this.batchHandler);
   }
 }
