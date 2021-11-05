@@ -1,8 +1,7 @@
 import { ApolloGateway, ServiceEndpointDefinition } from '@apollo/gateway';
 import { ApolloServer } from 'apollo-server';
 import { ExpressContext } from 'apollo-server-express/dist/ApolloServer';
-import { GraphQLRequestContext } from 'apollo-server-types';
-import { CustomBatchHttpLink, CustomOperationBatcher, getDefaultLinks, getServiceFetch, HttpContext } from './lib';
+import { CustomOperationBatcher, getLinks, HttpContext } from './lib';
 import { RemoteGraphQLBatchDataSource } from './lib/remote-graphql-batch-datasource';
 
 const port = 4000; 
@@ -14,13 +13,7 @@ const gateway = new ApolloGateway({
   ],
   buildService: (definition: ServiceEndpointDefinition) => new RemoteGraphQLBatchDataSource(
     definition,
-    [
-      ...getDefaultLinks(definition),
-      new CustomBatchHttpLink({
-        getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => requestContext.context.operationBatcher,
-        fetch: getServiceFetch(definition)
-      })
-    ]
+    getLinks(definition)
   )
 });
 

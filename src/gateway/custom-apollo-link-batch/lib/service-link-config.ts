@@ -1,8 +1,12 @@
 import { ServiceEndpointDefinition } from '@apollo/gateway';
 import { ApolloLink } from 'apollo-link';
+import { HttpLink } from 'apollo-link-http';
+import { GraphQLRequestContext } from 'apollo-server-types';
 import fetch from 'cross-fetch';
+import { CustomBatchHttpLink } from './custom-batch-http-link';
+import { CustomOperationBatcher } from './custom-operation-batcher';
 
-export const getDefaultLinks = (
+const getDefaultLinks = (
   serviceEndpointDefinition: ServiceEndpointDefinition
 ): ApolloLink[] => [
   new ApolloLink((operation, forward) => {
@@ -18,6 +22,32 @@ export const getDefaultLinks = (
       return data;
     })
   })
+];
+
+const getTerminatingLink = (
+  serviceEndpointDefinition: ServiceEndpointDefinition
+): ApolloLink => {
+  let terminatingLink: ApolloLink;
+  if (serviceEndpointDefinition.name === 'none') {
+    terminatingLink = new HttpLink({
+      uri: serviceEndpointDefinition.url,
+      fetch: getServiceFetch(serviceEndpointDefinition)
+    })
+
+  } else {
+    terminatingLink = new CustomBatchHttpLink({
+      getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => requestContext.context.operationBatcher,
+      fetch: getServiceFetch(serviceEndpointDefinition)
+    })
+  };
+  return terminatingLink;
+}
+
+export const getLinks = (
+  serviceEndpointDefinition: ServiceEndpointDefinition
+): ApolloLink[] => [
+  ...getDefaultLinks(serviceEndpointDefinition), 
+  getTerminatingLink(serviceEndpointDefinition)
 ];
 
 export const getServiceFetch = (
