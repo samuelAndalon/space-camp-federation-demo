@@ -28,18 +28,19 @@ const getTerminatingLink = (
   serviceEndpointDefinition: ServiceEndpointDefinition
 ): ApolloLink => {
   let terminatingLink: ApolloLink;
+
   if (serviceEndpointDefinition.name === 'none') {
     terminatingLink = new HttpLink({
       uri: serviceEndpointDefinition.url,
       fetch: getServiceFetch(serviceEndpointDefinition)
     })
-
   } else {
     terminatingLink = new CustomBatchHttpLink({
       getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => requestContext.context.operationBatcher,
       fetch: getServiceFetch(serviceEndpointDefinition)
     })
   };
+  
   return terminatingLink;
 }
 
