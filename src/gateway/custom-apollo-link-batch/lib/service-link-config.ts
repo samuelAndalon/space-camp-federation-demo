@@ -36,11 +36,12 @@ const getTerminatingLink = (
     })
   } else {
     terminatingLink = new CustomBatchHttpLink({
+      uri: serviceEndpointDefinition.url,
       getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => requestContext.context.operationBatcher,
       fetch: getServiceFetch(serviceEndpointDefinition)
     })
   };
-  
+
   return terminatingLink;
 }
 

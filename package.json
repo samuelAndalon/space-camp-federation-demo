@@ -6,6 +6,7 @@
   "dependencies": {
     "@apollo/federation": "^0.29",
     "@apollo/gateway": "^0.38",
+    "@types/jest": "^27.0.2",
     "apollo-link-batch-http": "^1",
     "apollo-link-http": "^1",
     "apollo-server": "^3",
@@ -13,9 +14,11 @@
     "cross-fetch": "^3.1.4",
     "dataloader": "^2.0.0",
     "graphql": "^15.0.0",
+    "jest": "^27.3.1",
     "json-server": "^0.16.1",
     "nodemon": "^2.0.14",
     "queue-microtask": "^1.2.3",
+    "ts-jest": "^27.0.7",
     "ts-node": "^10.4.0",
     "tsc-watch": "^4.5.0",
     "typescript": "^4.4.4"
@@ -30,7 +33,8 @@
     "server-gateway-batch-apollo-link": "nodemon --watch src -e ts --exec node --inspect -r ts-node/register src/gateway/custom-apollo-link-batch/server.ts",
     "server:rest": "json-server -q db.json",
     "server:astronauts": "nodemon src/astronauts/astronauts-server.js",
-    "server:mission": "nodemon src/missions/missions-server.js"
+    "server:mission": "nodemon src/missions/missions-server.js",
+    "test": "node --inspect-brk node_modules/.bin/jest --runInBand"
   },
   "keywords": [],
   "author": "",

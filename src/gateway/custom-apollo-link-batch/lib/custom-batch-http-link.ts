@@ -3,7 +3,7 @@ import {
   checkFetcher,
   createSignalIfSupported, fallbackHttpConfig,
   HttpOptions, parseAndCheckHttpResponse,
-  selectHttpOptionsAndBody, serializeFetchParameter
+  selectHttpOptionsAndBody, serializeFetchParameter, HttpConfig, Body
 } from 'apollo-link-http-common';
 import { GraphQLRequestContext } from 'apollo-server-types';
 import { CustomOperationBatcher } from './custom-operation-batcher';
@@ -28,6 +28,7 @@ export class CustomBatchHttpLink extends ApolloLink {
     const fetcher = fetchParams?.fetch ? fetchParams.fetch : fetch;
 
     let {
+      uri,
       includeExtensions,
       getOperationBatcher,
       ...requestOptions
@@ -36,17 +37,10 @@ export class CustomBatchHttpLink extends ApolloLink {
     // dev warnings to ensure fetch is present
     checkFetcher(fetcher);
 
-    const linkConfig = {
-      http: { includeExtensions },
-      options: requestOptions.fetchOptions,
-      credentials: requestOptions.credentials,
-      headers: requestOptions.headers
-    };
-
     this.getOperationBatcher = getOperationBatcher;
     this.batchHandler = (operations: Operation[]): Observable<FetchResult[]> => {
       const context = operations[0].getContext();
-      const chosenURI = context.url;
+      const chosenURI = uri || context.url;
 
       const clientAwarenessHeaders = new Map<string, any>();
       if (context.clientAwareness) {
@@ -59,6 +53,13 @@ export class CustomBatchHttpLink extends ApolloLink {
         }
       }
 
+      const linkConfig = {
+        http: { includeExtensions },
+        options: requestOptions.fetchOptions,
+        credentials: requestOptions.credentials,
+        headers: requestOptions.headers
+      };
+
       const contextConfig = {
         http: context.http,
         options: context.fetchOptions,
@@ -67,17 +68,15 @@ export class CustomBatchHttpLink extends ApolloLink {
       };
 
       //uses fallback, link, and then context to build options
-      const optsAndBody = operations.map(operation =>
-        selectHttpOptionsAndBody(
-          operation,
-          fallbackHttpConfig,
-          linkConfig,
-          contextConfig,
-        ),
+      const optionsAndBody: {
+        options: HttpConfig & Record<string, any>,
+        body: Body
+       }[] = operations.map((operation: Operation) =>
+        selectHttpOptionsAndBody(operation, fallbackHttpConfig, linkConfig, contextConfig),
       );
 
-      const loadedBody = optsAndBody.map(({ body }) => body);
-      const options = optsAndBody[0].options;
+      const loadedBody: Body[] = optionsAndBody.map(({ body }) => body);
+      const options: HttpConfig & Record<string, any> = optionsAndBody[0].options;
 
       // There's no spec for using GET with batches.
       if (options.method === 'GET') {
