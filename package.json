@@ -13,6 +13,7 @@
     "concurrently": "^5.1.0",
     "cross-fetch": "^3.1.4",
     "dataloader": "^2.0.0",
+    "fetch-mock": "^9.11.0",
     "graphql": "^15.0.0",
     "jest": "^27.3.1",
     "json-server": "^0.16.1",
@@ -34,7 +35,7 @@
     "server:rest": "json-server -q db.json",
     "server:astronauts": "nodemon src/astronauts/astronauts-server.js",
     "server:mission": "nodemon src/missions/missions-server.js",
-    "test": "node --inspect-brk node_modules/.bin/jest --runInBand"
+    "test": "node --inspect node_modules/.bin/jest --runInBand"
   },
   "keywords": [],
   "author": "",

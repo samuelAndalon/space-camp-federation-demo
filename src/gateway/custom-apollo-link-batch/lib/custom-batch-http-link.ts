@@ -21,7 +21,7 @@ export class CustomBatchHttpLink extends ApolloLink {
   private batchHandler: (operations: Operation[]) => Observable<FetchResult[]>;
   private getOperationBatcher: (requestContext: GraphQLRequestContext) => CustomOperationBatcher
 
-  constructor(fetchParams?: CustomBatchHttpLink.Options) {
+  constructor(fetchParams: CustomBatchHttpLink.Options) {
     super();
 
     // use default global fetch if nothing is passed in
