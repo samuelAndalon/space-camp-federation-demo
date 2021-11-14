@@ -39,7 +39,7 @@ describe('BatchHttpLink', () => {
     fetchMock.post('begin:/lawl', makePromise([lawlData1]));
   });
 
-  it('handles batched requests to same service', (done) => {
+  it.only('handles batched requests to same service', (done) => {
     const link = new CustomBatchHttpLink({
       uri: '/batch',
       getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => {
