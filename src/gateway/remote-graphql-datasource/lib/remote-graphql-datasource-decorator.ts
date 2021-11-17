@@ -5,13 +5,16 @@ import { HttpContext } from './http-context';
 
 export class RemoteGraphQLDataSourceDecorator extends RemoteGraphQLDataSource<HttpContext> {
 
+  private serviceEndpointDefinition: ServiceEndpointDefinition
+
   constructor(serviceEndpointDefinition: ServiceEndpointDefinition) {
     super(serviceEndpointDefinition);
+    this.serviceEndpointDefinition = serviceEndpointDefinition;
   }
 
   async process(options: GraphQLDataSourceProcessOptions<HttpContext>): Promise<GraphQLResponse> {
     if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
-      console.log(`request from query planner: ${JSON.stringify(options.request, null, 2)}`);
+      console.log(`request from query planner to service ${this.serviceEndpointDefinition.name}: ${JSON.stringify(options.request, null, 2)}`);
       return super.process(options);
     }
     return super.process(options);

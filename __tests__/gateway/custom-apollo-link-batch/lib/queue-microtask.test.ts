@@ -1,13 +1,13 @@
 import queueMicrotask from 'queue-microtask';
 
 describe('queueMicrotask', () => {
-  const processMessagesMockFn = jest.fn().mockImplementation(json => {
-    return new Promise((resolve, _) => {
+  const processMessagesMockFn = jest.fn().mockImplementation(json =>
+    new Promise((resolve, _) => {
       setTimeout(() => {
         resolve(json);
-      }, 500);
-    });
-  });
+      }, 2000);
+    })
+  );
 
   const messageQueue: any[] = [];
   const sendMessage = (message: any) => {
@@ -20,19 +20,37 @@ describe('queueMicrotask', () => {
         await processMessagesMockFn(json);
       });
     }
-
   }
 
   test('should process messages', (done) => {
 
-    sendMessage({ message: 'foo' });
-    sendMessage({ message: 'bar' });
+    sendMessage({ message: 'hello' });
+    sendMessage({ message: 'world' });
 
     queueMicrotask(async () => {
       expect(processMessagesMockFn).toHaveBeenCalledTimes(1);
-      expect(processMessagesMockFn).toHaveBeenCalledWith(`[{"message":"foo"},{"message":"bar"}]`);
-      expect(await processMessagesMockFn.mock.results[0].value).toBe(`[{"message":"foo"},{"message":"bar"}]`);
+      expect(processMessagesMockFn).toHaveBeenCalledWith(`[{"message":"hello"},{"message":"world"}]`);
+      expect(await processMessagesMockFn.mock.results[0].value).toBe(`[{"message":"hello"},{"message":"world"}]`);
       done();
     });
+  });
+
+  test.only('microtask queue processed async', (done) => {
+    queueMicrotask(async () => {
+      await processMessagesMockFn(`{"foo": "bar"}`);
+    });
+    queueMicrotask(async () => {
+      await processMessagesMockFn(`{"foo2": "bar2"}`);
+    });
+
+    queueMicrotask(async () => {
+      expect(processMessagesMockFn).toHaveBeenCalledTimes(2);
+      expect(processMessagesMockFn).toHaveBeenNthCalledWith(1, `{"foo": "bar"}`);
+      expect(processMessagesMockFn).toHaveBeenNthCalledWith(2, `{"foo2": "bar2"}`);
+
+      expect(await processMessagesMockFn.mock.results[0].value).toBe(`{"foo": "bar"}`);
+      expect(await processMessagesMockFn.mock.results[1].value).toBe(`{"foo2": "bar2"}`);
+      done();
+    })
   });
 });

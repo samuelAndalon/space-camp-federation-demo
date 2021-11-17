@@ -1,3 +1,25 @@
+// without federation
+curl 'http://localhost:4000/' \
+-H 'Content-Type: application/json' \
+--data-binary '[
+  {"query":"query Mission($id: ID!) { mission(id: $id) { designation crew { id } } }","variables":{"id":1}}, 
+  {"query":"query Mission($id: ID!) { mission(id: $id) { designation crew { id } } }","variables":{"id":5}}, 
+  {"query":"query Astronaut($id: ID!) { astronaut(id: $id) { id name } }","variables":{"id":1}}
+]'
+
+// without federation no variables
+curl 'http://localhost:4000/' \
+-H 'Content-Type: application/json' \
+--data-binary '[
+  { "query": "query getMission { mission(id: 1) { designation } }" },
+  { "query": "query getAstronaut { astronaut(id: 2) { id name } }" },
+  { "query": "query getMission { mission(id: 5) { designation } }" },
+  { "query": "query getMissionCrew { mission(id: 4) { crew { id } } }" },
+  { "query": "query getAstronautName { astronaut(id: 2) { name } }" },
+  { "query": "query getMissionCrew { mission(id: 14) { crew { id } } }" },
+  { "query": "query getAstronautId { astronaut(id: 1) { id } }" }
+]'
+
 // with federation
 curl 'http://localhost:4000/' \
 -H 'Content-Type: application/json' \
@@ -5,13 +27,4 @@ curl 'http://localhost:4000/' \
   {"query":"query Mission($id: ID!) { mission(id: $id) { designation crew { id name } } }","variables":{"id":1}}, 
   {"query":"query Mission($id: ID!) { mission(id: $id) { designation crew { id name } } }","variables":{"id":5}}, 
   {"query":"query Atronaut($id: ID!) { astronaut(id: $id) { id name missions { designation } } }","variables":{"id":1}}
-]' --compressed
-
-// without federation
-curl 'http://localhost:4000/' \
--H 'Content-Type: application/json' \
---data-binary '[
-  {"query":"query Mission($id: ID!) { mission(id: $id) { designation crew { id } } }","variables":{"id":1}}, 
-  {"query":"query Mission($id: ID!) { mission(id: $id) { designation crew { id } } }","variables":{"id":5}}, 
-  {"query":"query Atronaut($id: ID!) { astronaut(id: $id) { id name } }","variables":{"id":1}}
-]' --compressed
+]'

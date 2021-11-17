@@ -6,14 +6,13 @@ import { HttpContext } from './http-context';
 import { GraphQLOperationBatchHandler } from './graphql-operation-batch-handler';
 
 export interface BatcheableOperation {
-  serviceEndpointDefinition: ServiceEndpointDefinition,
   options: GraphQLDataSourceProcessOptions<HttpContext>,
   deferred: Deferred<GraphQLResponse>
 }
 
 export class GraphQLOperationsBatcher {
 
-  queue: BatcheableOperation[] = [];
+  batcheableOperationsQueue: Map<string, BatcheableOperation[]> = new Map();
   graphqlOperationBatchHandler: GraphQLOperationBatchHandler = new GraphQLOperationBatchHandler();
 
   public enqueue(
@@ -21,70 +20,46 @@ export class GraphQLOperationsBatcher {
     options: GraphQLDataSourceProcessOptions<HttpContext>
   ): BatcheableOperation {
     const operation: BatcheableOperation = {
-      serviceEndpointDefinition,
       options,
       deferred: new Deferred<GraphQLResponse>(),
     }
-    this.queue.push(operation);
+
+    if (!this.batcheableOperationsQueue.has(serviceEndpointDefinition.name)) {
+      this.batcheableOperationsQueue.set(serviceEndpointDefinition.name, []);
+    }
+    this.batcheableOperationsQueue.get(serviceEndpointDefinition.name)?.push(operation);
   
-    if (this.queue.length === 1) {
+    // setup microtask only after we add the first request for a particular service into the queue
+    // this will execute the callback when no callbacks are left in the global execution context
+    // and before executing the callback queue
+    if (this.batcheableOperationsQueue.get(serviceEndpointDefinition.name)?.length === 1) {
       queueMicrotask(async () => {
-        await this.consumeQueue();
+        await this.consumeQueue(serviceEndpointDefinition);
       });
     }
     return operation;
   }
 
-  public async consumeQueue() {
-    console.log(`queue length: ${this.queue.length}`);
+  public async consumeQueue(serviceEndpointDefinition: ServiceEndpointDefinition) {
 
-    // theorically the query planner is the one that decides how to resolve data
-    // so we need to keep in mind that RemoteGraphQLDataSource is created by graphQL services
-    // so when a RemoteGraphQLDataSourceDecorator instance enqueues its already know that that query can be served
-    // from that graphQL service, otherwise it would not be enqueued from there.
-    const associatedRequests: Map<string, BatcheableOperation[]> = this.queue.reduce(
-      (acc: Map<string, BatcheableOperation[]>, operation: BatcheableOperation) => {
-        if (!acc.has(operation.serviceEndpointDefinition.name)) {
-          acc.set(operation.serviceEndpointDefinition.name, []);
-        }
-        acc.get(operation.serviceEndpointDefinition.name)?.push(operation);
-        return acc;
-      }, 
-      new Map<string, BatcheableOperation[]>()
-    );
+    const operations: BatcheableOperation[] | undefined = 
+      this.batcheableOperationsQueue.has(serviceEndpointDefinition.name) ? 
+        this.batcheableOperationsQueue.get(serviceEndpointDefinition.name) : 
+        [];
 
-    this.queue.length = 0;
-
-    console.log('dispatching requestsQueue');
-    Array.from(associatedRequests.entries()).forEach(entry => console.log(`key: ${entry[0]}, # operations: ${entry[1].length}`));
-
-    /*
-    // Can improve this to resolve batches concurrently instead of sequentially.
-    for(const [serviceName, operations] of associatedRequests) {
-      const batchedOperationsResult: GraphQLResponse[] = await this.graphqlOperationBatchHandler.handle(
-        operations[0].serviceEndpointDefinition,
-        operations.map((operation) => operation.options)
-      );
-      operations.forEach((operation, index) => {
-        operation.deferred.resolve(batchedOperationsResult[index]);
-      });
-    }
-    */
-
-    let promises: Promise<GraphQLResponse[]>[] = [];
-
-    for (const [serviceName, operations] of associatedRequests) {
-      promises = [
-        ...promises, 
-        this.graphqlOperationBatchHandler.handle(
-          operations[0].serviceEndpointDefinition,
-          operations.map((operation) => operation.options)
-        )
-      ];
+    if (!operations) {
+      return;
     }
 
-    const operations = ([] as BatcheableOperation[]).concat(...Array.from(associatedRequests.values()));
-    const responses = ([] as GraphQLResponse[]).concat(...await Promise.all(promises));
+    this.batcheableOperationsQueue.set(serviceEndpointDefinition.name, []);
+
+
+    console.log(`dispatching queue of service ${serviceEndpointDefinition.name} with ${operations.length} operations`);
+
+    const responses: GraphQLResponse[] = await this.graphqlOperationBatchHandler.handle(
+      serviceEndpointDefinition,
+      operations.map((operation) => operation.options)
+    )
 
     operations.forEach((operation: BatcheableOperation, index: number) => {
       operation.deferred.resolve(responses[index]);
