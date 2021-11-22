@@ -36,6 +36,7 @@ const getTerminatingLink = (
     })
   } else {
     terminatingLink = new CustomBatchHttpLink({
+      serviceName: serviceEndpointDefinition.name,
       uri: serviceEndpointDefinition.url,
       getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => requestContext.context.operationBatcher,
       fetch: getServiceFetch(serviceEndpointDefinition)

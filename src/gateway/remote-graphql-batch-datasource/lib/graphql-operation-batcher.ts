@@ -53,7 +53,6 @@ export class GraphQLOperationsBatcher {
 
     this.batcheableOperationsQueue.set(serviceEndpointDefinition.name, []);
 
-
     console.log(`dispatching queue of service ${serviceEndpointDefinition.name} with ${operations.length} operations`);
 
     const responses: GraphQLResponse[] = await this.graphqlOperationBatchHandler.handle(

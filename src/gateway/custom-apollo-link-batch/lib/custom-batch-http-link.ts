@@ -1,15 +1,19 @@
 import { ApolloLink, FetchResult, fromError, Observable, Operation } from 'apollo-link';
 import {
-  checkFetcher,
-  createSignalIfSupported, fallbackHttpConfig,
-  HttpOptions, parseAndCheckHttpResponse,
-  selectHttpOptionsAndBody, serializeFetchParameter, HttpConfig, Body
+  Body, checkFetcher,
+  fallbackHttpConfig,
+  HttpConfig, HttpOptions, parseAndCheckHttpResponse,
+  selectHttpOptionsAndBody, serializeFetchParameter
 } from 'apollo-link-http-common';
 import { GraphQLRequestContext } from 'apollo-server-types';
 import { CustomOperationBatcher } from './custom-operation-batcher';
 
 export namespace CustomBatchHttpLink {
   export interface Options extends HttpOptions {
+    /**
+     * name of the service used to create this batchHttpLink
+     */
+    serviceName: string;
     /**
      * callback that passes the request context of request and should return the CustomOperationBatcher
      */
@@ -18,6 +22,7 @@ export namespace CustomBatchHttpLink {
 }
 
 export class CustomBatchHttpLink extends ApolloLink {
+  private serviceName: string;
   private batchHandler: (operations: Operation[]) => Observable<FetchResult[]>;
   private getOperationBatcher: (requestContext: GraphQLRequestContext) => CustomOperationBatcher
 
@@ -28,30 +33,21 @@ export class CustomBatchHttpLink extends ApolloLink {
     const fetcher = fetchParams?.fetch ? fetchParams.fetch : fetch;
 
     let {
+      serviceName,
       uri,
       includeExtensions,
       getOperationBatcher,
       ...requestOptions
-    } = fetchParams || ({} as CustomBatchHttpLink.Options);
+    } = fetchParams;
 
     // dev warnings to ensure fetch is present
     checkFetcher(fetcher);
 
+    this.serviceName = serviceName;
     this.getOperationBatcher = getOperationBatcher;
     this.batchHandler = (operations: Operation[]): Observable<FetchResult[]> => {
       const context = operations[0].getContext();
       const chosenURI = uri || context.url;
-
-      const clientAwarenessHeaders = new Map<string, any>();
-      if (context.clientAwareness) {
-        const { name, version } = context.clientAwareness;
-        if (name) {
-          clientAwarenessHeaders.set('apollographql-client-name', name);
-        }
-        if (version) {
-          clientAwarenessHeaders.set('apollographql-client-version', version);
-        }
-      }
 
       const linkConfig = {
         http: { includeExtensions },
@@ -64,10 +60,9 @@ export class CustomBatchHttpLink extends ApolloLink {
         http: context.http,
         options: context.fetchOptions,
         credentials: context.credentials,
-        headers: { ...clientAwarenessHeaders, ...context.headers },
+        headers: { ...context.headers },
       };
 
-      //uses fallback, link, and then context to build options
       const optionsAndBody: {
         options: HttpConfig & Record<string, any>,
         body: Body
@@ -78,13 +73,6 @@ export class CustomBatchHttpLink extends ApolloLink {
       const loadedBody: Body[] = optionsAndBody.map(({ body }) => body);
       const options: HttpConfig & Record<string, any> = optionsAndBody[0].options;
 
-      // There's no spec for using GET with batches.
-      if (options.method === 'GET') {
-        return fromError<FetchResult[]>(
-          new Error('apollo-link-batch-http does not support GET requests'),
-        );
-      }
-
       if (!chosenURI) {
         return fromError<FetchResult[]>(
           new Error('apollo-link-batch-http needs a URL'),
@@ -92,16 +80,9 @@ export class CustomBatchHttpLink extends ApolloLink {
       }
 
       try {
-        (options as any).body = serializeFetchParameter(loadedBody, 'Payload');
+        options.body = serializeFetchParameter(loadedBody, 'Payload');
       } catch (parseError) {
         return fromError<FetchResult[]>(parseError);
-      }
-
-      let controller;
-      if (!(options as any).signal) {
-        const { controller: _controller, signal } = createSignalIfSupported();
-        controller = _controller;
-        if (controller) (options as any).signal = signal;
       }
 
       return new Observable<FetchResult[]>(observer => {
@@ -124,12 +105,6 @@ export class CustomBatchHttpLink extends ApolloLink {
 
             observer.error(err);
           });
-
-        return () => {
-          // XXX support canceling this request
-          // https://developers.google.com/web/updates/2017/09/abortable-fetch
-          if (controller) controller.abort();
-        };
       });
     };
   }
@@ -139,6 +114,12 @@ export class CustomBatchHttpLink extends ApolloLink {
     if(!operationBatcher) {
       return null;
     }
-    return operationBatcher.enqueue({ operation }, this.batchHandler);
+    return operationBatcher.enqueue(
+      { 
+        operation,
+        serviceName: this.serviceName
+      }, 
+      this.batchHandler
+    );
   }
 }
