@@ -8,6 +8,11 @@ const port = 4002;
 const missionsDataSource = new MissionsDataSource();
 
 const typeDefs = gql`
+  extend type Query {
+    mission(id: ID!): Mission
+    missions(ids: [ID!]): [Mission]
+  }
+  
   type Mission {
     id: ID!
     crew: [Astronaut]
@@ -19,11 +24,6 @@ const typeDefs = gql`
   extend type Astronaut @key(fields: "id") {
     id: ID! @external
     missions: [Mission]
-  }
-
-  extend type Query {
-    mission(id: ID!): Mission
-    missions(ids: [ID!]): [Mission]
   }
 `;
 

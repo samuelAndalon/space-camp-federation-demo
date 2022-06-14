@@ -12,6 +12,7 @@ const typeDefs = gql`
     astronaut(id: ID!): Astronaut
     astronauts(ids: [ID!]): [Astronaut]
   }
+  
   type Astronaut @key(fields: "id") {
     id: ID!
     name: String
