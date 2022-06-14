@@ -1,11 +1,11 @@
 const { ApolloServer, gql } = require("apollo-server");
 const { buildFederatedSchema } = require("@apollo/federation");
-const MissionsService = require("./missions-service");
+const MissionsDataSource = require("./missions-datasource");
 const DataLoader = require("dataloader");
 const { ApolloServerPluginLandingPageGraphQLPlayground } = require("apollo-server-core");
 
 const port = 4002;
-const missionsService = new MissionsService();
+const missionsDataSource = new MissionsDataSource();
 
 const typeDefs = gql`
   type Mission {
@@ -29,24 +29,14 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    mission: (_, { id }, context) => {
-      return context.dataLoaderRegistry.missionByIdDataLoader.load(id);
-      // return missionsService.getMission(id);    
-    },
-    missions: (_, { ids }) => {
-      return missionsService.getMissions(ids ? ids : [])
-    }
+    mission: (_, { id }, context) => missionsDataSource.getMission(id, context),
+    missions: (_, { ids }, context) => missionsDataSource.getMissions(ids, context)
   },
   Astronaut: {
-    missions: (astronaut, _, context) => {
-      return context.dataLoaderRegistry.missionByAstronautIdDataLoader.load(astronaut.id);
-      // return missionsService.getMissionsByAstronautId(astronaut.id)
-    }
+    missions: (astronaut, _, context) => missionsDataSource.getMissionsByAstronaut(astronaut.id, context)
   },
   Mission: {
-    crew: (mission) => {
-      return mission.crew.map(id => ({ __typename: "Astronaut", id }));
-    }
+    crew: (mission) => mission.crew.map(id => ({ __typename: "Astronaut", id }))
   }
 };
 
@@ -57,8 +47,8 @@ const server = new ApolloServer({
     console.log(`Request into missions graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
     return {
       dataLoaderRegistry: {
-        missionByIdDataLoader: new DataLoader(ids => missionsService.getMissions(ids)),
-        missionByAstronautIdDataLoader: new DataLoader(ids => missionsService.getMissionsByAstronautIds(ids))
+        missionByIdDataLoader: new DataLoader(ids => missionsDataSource.service.getMissions(ids)),
+        missionByAstronautIdDataLoader: new DataLoader(ids => missionsDataSource.service.getMissionsByAstronauts(ids))
       }
     }
   }

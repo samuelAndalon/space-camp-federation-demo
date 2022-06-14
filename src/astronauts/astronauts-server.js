@@ -1,39 +1,30 @@
-const { ApolloServer, gql } = require("apollo-server");
-const { buildFederatedSchema } = require("@apollo/federation");
-const AstronautsService = require("./astronauts-service");
-const DataLoader = require("dataloader");
-const { ApolloServerPluginLandingPageGraphQLPlayground } = require("apollo-server-core");
+const { ApolloServer, gql } = require('apollo-server');
+const { buildFederatedSchema } = require('@apollo/federation');
+const AstronautsDataSource = require('./astronauts-datasource');
+const DataLoader = require('dataloader');
+const { ApolloServerPluginLandingPageGraphQLPlayground } = require('apollo-server-core');
 
 const port = 4001;
-const astronautsService = new AstronautsService();
+const astronautsDataSource = new AstronautsDataSource();
 
 const typeDefs = gql`
-  type Astronaut @key(fields: "id") {
-    id: ID!
-    name: String
-  }
-
   extend type Query {
     astronaut(id: ID!): Astronaut
     astronauts(ids: [ID!]): [Astronaut]
+  }
+  type Astronaut @key(fields: "id") {
+    id: ID!
+    name: String
   }
 `;
 
 const resolvers = {
   Query: {
-    astronaut: (_, { id }, context) => {
-      return context.dataLoaderRegistry.astronautByIdDataLoader.load(id);
-      // return astronautsService.getAstronaut(id)
-    },
-    astronauts: (_, { ids }) => {
-      return astronautsService.getAstronauts(ids);
-    }
+    astronaut: (_, { id }, context) => astronautsDataSource.getAstronaut(id, context),
+    astronauts: (_, { ids }, context) => astronautsDataSource.getAstronauts(ids, context)
   },
   Astronaut: {
-    __resolveReference: (ref, context) => {
-      return context.dataLoaderRegistry.astronautByIdDataLoader.load(ref.id);
-      //return astronautsService.getAstronaut(ref.id);
-    }
+    __resolveReference: (reference, context) => astronautsDataSource.getAstronaut(reference.id, context)
   }
 };
 
@@ -44,7 +35,7 @@ const server = new ApolloServer({
     console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
     return {
       dataLoaderRegistry: {
-        astronautByIdDataLoader: new DataLoader(ids => astronautsService.getAstronautsByIds(ids))
+        astronautByIdDataLoader: new DataLoader(ids => astronautsDataSource.service.getAstronauts(ids))
       }
     }
   }
