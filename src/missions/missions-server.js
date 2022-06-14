@@ -39,7 +39,7 @@ const resolvers = {
   },
   Astronaut: {
     missions: (astronaut, _, context) => {
-      return context.dataLoaderRegistry.missionsByAstronautIdDataLoader.load(astronaut.id);
+      return context.dataLoaderRegistry.missionByAstronautIdDataLoader.load(astronaut.id);
       // return missionsService.getMissionsByAstronautId(astronaut.id)
     }
   },

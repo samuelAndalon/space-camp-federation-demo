@@ -3,6 +3,7 @@ import { ApolloServer } from 'apollo-server';
 import { ExpressContext } from 'apollo-server-express/dist/ApolloServer';
 import { CustomOperationBatcher, getLinks, HttpContext } from './lib';
 import { RemoteGraphQLBatchDataSource } from './lib/remote-graphql-batch-datasource';
+import { ApolloServerPluginLandingPageGraphQLPlayground } from 'apollo-server-core';
 
 const port = 4000; 
 
@@ -25,6 +26,7 @@ const gateway = new ApolloGateway({
 
 const server = new ApolloServer({
   gateway,
+  plugins: [ ApolloServerPluginLandingPageGraphQLPlayground() ],
   context: (_: ExpressContext): HttpContext => ({
     operationBatcher: new CustomOperationBatcher()
   })
