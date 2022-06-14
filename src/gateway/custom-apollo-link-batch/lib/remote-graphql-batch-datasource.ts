@@ -22,7 +22,7 @@ export class RemoteGraphQLBatchDataSource extends RemoteGraphQLDataSource<HttpCo
     options: GraphQLDataSourceProcessOptions<HttpContext>
   ): Promise<GraphQLResponse> {
     if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
-      console.log(`Query planner request: ${JSON.stringify(options.request, null, 2)}`);
+      //console.log(`Query planner request: ${JSON.stringify(options.request, null, 2)}`);
       const request = options.request;
       const query = request.query;
 

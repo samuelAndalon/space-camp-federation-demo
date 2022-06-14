@@ -22,7 +22,7 @@ describe('queueMicrotask', () => {
     }
   }
 
-  test('should process messages', (done) => {
+  test.only('should process messages', (done) => {
 
     sendMessage({ message: 'hello' });
     sendMessage({ message: 'world' });
@@ -35,7 +35,7 @@ describe('queueMicrotask', () => {
     });
   });
 
-  test.only('microtask queue processed async', (done) => {
+  test('microtask queue processed async', (done) => {
     queueMicrotask(async () => {
       await processMessagesMockFn(`{"foo": "bar"}`);
     });

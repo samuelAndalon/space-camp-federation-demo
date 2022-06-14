@@ -11,10 +11,16 @@ const gateway = new ApolloGateway({
     { name: 'astronauts', url: 'http://localhost:4001' }, 
     { name: 'missions', url: 'http://localhost:4002' }
   ],
-  buildService: (definition: ServiceEndpointDefinition) => new RemoteGraphQLBatchDataSource(
-    definition,
-    getLinks(definition)
-  )
+  buildService: (definition: ServiceEndpointDefinition) => 
+    new RemoteGraphQLBatchDataSource(
+      definition,
+      getLinks(definition)
+    ),
+  experimental_didResolveQueryPlan: (options) => {
+    if (options.requestContext.operationName !== 'IntrospectionQuery') {
+      options.requestContext.context.queryPlan = options.queryPlan;
+    }
+  }
 });
 
 const server = new ApolloServer({

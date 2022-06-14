@@ -1,6 +1,7 @@
 const { ApolloServer, gql } = require("apollo-server");
 const { buildFederatedSchema } = require("@apollo/federation");
 const AstronautsService = require("./astronauts-service");
+const DataLoader = require("dataloader");
 const { ApolloServerPluginLandingPageGraphQLPlayground } = require("apollo-server-core");
 
 const port = 4001;
@@ -20,12 +21,17 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    astronaut: (_, { id }) => astronautsService.getAstronaut(id),
-    astronauts: () => astronautsService.getAstronauts()
+    astronaut: (_, { id }, context) => {
+      return context.dataLoaderRegistry.astronautByIdDataLoader.load(id);
+      // return astronautsService.getAstronaut(id)
+    },
+    astronauts: (_, { ids }) => {
+      return astronautsService.getAstronauts(ids);
+    }
   },
   Astronaut: {
     __resolveReference: (ref, context) => {
-      return context.loaders.astronautsDataLoader.load(ref.id);
+      return context.dataLoaderRegistry.astronautByIdDataLoader.load(ref.id);
       //return astronautsService.getAstronaut(ref.id);
     }
   }
@@ -33,14 +39,12 @@ const resolvers = {
 
 const server = new ApolloServer({
   schema: buildFederatedSchema([{ typeDefs, resolvers }]),
-  plugins: [
-    ApolloServerPluginLandingPageGraphQLPlayground()
-  ],
+  plugins: [ ApolloServerPluginLandingPageGraphQLPlayground() ],
   context: ({ req }) => {
     console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
     return {
-      loaders: {
-        astronautsDataLoader: astronautsService.getAstronautsDataLoader()
+      dataLoaderRegistry: {
+        astronautByIdDataLoader: new DataLoader(ids => astronautsService.getAstronautsByIds(ids))
       }
     }
   }

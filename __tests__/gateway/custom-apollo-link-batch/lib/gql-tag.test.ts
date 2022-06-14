@@ -15,15 +15,15 @@ describe('gql tag', () => {
           expires
         }
       }
-      mutation permutation {
-        user(id: 5) {
-          firstName
-          lastName
-          mutation
+      query getExperience {
+        experience(id: 5) {
+          actions {
+            ...ActionsParts
+          }
         }
       }
     `;
-    expect(query).toBe(null);
+    expect(query).not.toBe(null);
   });
 });
 
