@@ -1,6 +1,6 @@
-const fetch = require("node-fetch");
+const fetch = require('node-fetch');
 
-const apiUrl = "http://localhost:3000";
+const apiUrl = 'http://localhost:3000';
 
 module.exports = class AstronautsService {
   async getAstronauts(ids) {

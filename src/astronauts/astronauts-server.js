@@ -1,8 +1,7 @@
+const { ApolloServerPluginLandingPageGraphQLPlayground } = require('apollo-server-core');
 const { ApolloServer, gql } = require('apollo-server');
 const { buildFederatedSchema } = require('@apollo/federation');
 const AstronautsDataSource = require('./astronauts-datasource');
-const DataLoader = require('dataloader');
-const { ApolloServerPluginLandingPageGraphQLPlayground } = require('apollo-server-core');
 
 const port = 4001;
 const astronautsDataSource = new AstronautsDataSource();
@@ -12,7 +11,7 @@ const typeDefs = gql`
     astronaut(id: ID!): Astronaut
     astronauts(ids: [ID!]): [Astronaut]
   }
-  
+
   type Astronaut @key(fields: "id") {
     id: ID!
     name: String
@@ -36,7 +35,7 @@ const server = new ApolloServer({
     console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
     return {
       dataLoaderRegistry: {
-        astronautByIdDataLoader: new DataLoader(ids => astronautsDataSource.service.getAstronauts(ids))
+        ...astronautsDataSource.getDataLoaders()
       }
     }
   }
