@@ -1,6 +1,6 @@
 const { ApolloServerPluginLandingPageGraphQLPlayground } = require('apollo-server-core');
 const { ApolloServer, gql } = require('apollo-server');
-const { buildFederatedSchema } = require('@apollo/federation');
+const { buildSubgraphSchema } = require('@apollo/subgraph');
 const AstronautsDataSource = require('./astronauts-datasource');
 
 const port = 4001;
@@ -29,7 +29,7 @@ const resolvers = {
 };
 
 const server = new ApolloServer({
-  schema: buildFederatedSchema([{ typeDefs, resolvers }]),
+  schema: buildSubgraphSchema([{ typeDefs, resolvers }]),
   plugins: [ ApolloServerPluginLandingPageGraphQLPlayground() ],
   context: ({ req }) => {
     console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
