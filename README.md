@@ -1,34 +1,68 @@
-# Apollo Space Camp Demo Code
+# Batching from Gateway to Subgraphs and Subgraphs to data sources
 
-Forked repository from https://github.com/mandiwise/space-camp-federation-demo, adding data loaders to reduce and simplify
-how the resolvers are accesing the data to fullfill the query schema.
+Forked repository from https://github.com/mandiwise/space-camp-federation-demo, 
 
-
-The main goal of this is to try to find a way to batch queries from the federated gateway to downstream gql services.
+- Adding a custom data source to allow batching from gateway to subgraphs.
+- Adding dataloaders in subgraphs to allow batching to data sources (downstream services).
 
 **Installation:**
 
 ```sh
-npm i && npm run server
+npm i
 ```
 
-resources
+1. Without Batching in Gateway
+```sh
+npm run server-gateway-datasource
+```
 
-https://jira.expedia.biz/browse/BEXAPI-706
+2. Batching in Gateway to subgraphs using a custom Batch DataSource
+```sh
+npm run server-gateway-batch-datasource
+```
+
+2. Batching in Gateway to subgraphs using a custom ApolloLink
+```sh
+npm run server-gateway-batch-apollo-link
+```
+
+Gateway Server
+
+https://localhost:4000
+
+Astronauts Server
+
+https://localhost:4001
+
+Missions Server
+
+https://localhost:4002
+
+# Example
 
 
-https://www.apollographql.com/blog/apollo-client/performance/batching-client-graphql-queries/#5853
+## Gateway Layer
 
-https://medium.com/the-marcy-lab-school/what-is-the-n-1-problem-in-graphql-dd4921cb3c1a
+Given a gateway with 2 GraphQL Services: `Missions` and `Astronauts`, if we send a batched request with **7 operations** and gateway to the gateway and the gateway does not allow batching to subgrapghs a total of **7 requests** will be sent from gateway to subgraphs:
 
-https://medium.com/the-marcy-lab-school/how-to-use-dataloader-js-9727c527efd0
+- **4 requests** to the `Missions` GraphQL service
+- **3 requests** to the `Astronauts` GraphQL Service.
 
-https://www.apollographql.com/docs/react/api/link/apollo-link-batch-http/
+![gateway-no-batching](./docs/gateway-no-batching.png)
 
-https://shopify.engineering/solving-the-n-1-problem-for-graphql-through-batching
+if we enable batching in the gateway a single batched request of **7 operations** will be reduced to **2 requests** sent to the downstream services.
 
-https://itnext.io/how-to-avoid-n-1-problem-in-apollo-federation-8b4f37729fc4
+- **1 batch request with 4 operations** to the `Missions` GraphQL service
+- **1 batch request with 3 operations ** to the `Astronauts` GraphQL Service.
 
-https://spectrum.chat/apollo/apollo-server/query-batching-apollo-federation-vs-apollo-server~6326ceab-cb5d-4ba6-8306-eeeebb1b4575
+![gateway-no-batching](./docs/gateway-batching.png)
 
-https://github.com/apollographql/federation/issues/372
+## Subgrapghs Layer
+
+If subgraphs don't apply batching and deduplication on resolvers, the subgraphs will be doing multiple roundtrips to the data sources.
+
+![subgraph-no-batching](./docs/subgraph-no-batching.png)
+
+If subgraphs apply batching and deduplication with DataLoaders on resolvers, the subgraphs will be doing only 1 roundtrip to the data sources.
+
+![./docs/subgraph-batching](./docs/subgraph-batching.png)
