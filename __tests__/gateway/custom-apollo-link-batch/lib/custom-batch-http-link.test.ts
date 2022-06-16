@@ -41,6 +41,7 @@ describe('BatchHttpLink', () => {
 
   it.only('handles batched requests to same service', (done) => {
     const link = new CustomBatchHttpLink({
+      serviceName: 'serviceA',
       uri: '/batch',
       getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => {
         return requestContext.context.operationBatcher
@@ -116,9 +117,9 @@ describe('BatchHttpLink', () => {
     const getOperationBatcher = (requestContext: GraphQLRequestContext): CustomOperationBatcher => {
       return requestContext.context.operationBatcher
     };
-    const linkServiceA = new CustomBatchHttpLink({ uri: '/batch', getOperationBatcher });
-    const linkServiceB = new CustomBatchHttpLink({ uri: '/rofl', getOperationBatcher });
-    const linkServiceC = new CustomBatchHttpLink({ uri: '/lawl', getOperationBatcher });
+    const linkServiceA = new CustomBatchHttpLink({ serviceName: 'serviceA', uri: '/batch', getOperationBatcher });
+    const linkServiceB = new CustomBatchHttpLink({ serviceName: 'serviceB', uri: '/rofl', getOperationBatcher });
+    const linkServiceC = new CustomBatchHttpLink({ serviceName: 'serviceC', uri: '/lawl', getOperationBatcher });
 
     const nextCalls = {
       serviceA: 0,
@@ -212,6 +213,7 @@ describe('BatchHttpLink', () => {
 
   it('errors on an incorrect number of results for a batch', (done) => {
     const link = new CustomBatchHttpLink({
+      serviceName: 'serviceA',
       uri: '/batch',
       getOperationBatcher: (requestContext: GraphQLRequestContext): CustomOperationBatcher => {
         return requestContext.context.operationBatcher
