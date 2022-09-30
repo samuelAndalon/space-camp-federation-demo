@@ -5,16 +5,17 @@ import { HttpContext } from './http-context';
 
 export class RemoteGraphQLDataSourceDecorator extends RemoteGraphQLDataSource<HttpContext> {
 
-  private serviceEndpointDefinition: ServiceEndpointDefinition
+  subgraphName: string;
 
   constructor(serviceEndpointDefinition: ServiceEndpointDefinition) {
     super(serviceEndpointDefinition);
-    this.serviceEndpointDefinition = serviceEndpointDefinition;
+    this.subgraphName = serviceEndpointDefinition.name;
   }
 
   async process(options: GraphQLDataSourceProcessOptions<HttpContext>): Promise<GraphQLResponse> {
     if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
-      console.log(`request from query planner to service ${this.serviceEndpointDefinition.name}: ${JSON.stringify(options.request, null, 2)}`);
+      options.incomingRequestContext.context.subgraphsRequestCount[this.subgraphName]++;
+      // console.log(`request from query planner to service ${this.serviceEndpointDefinition.name}: ${JSON.stringify(options.request, null, 2)}`);
       return super.process(options);
     }
     return super.process(options);

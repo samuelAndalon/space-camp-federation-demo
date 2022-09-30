@@ -1,9 +1,10 @@
 import { GraphQLDataSourceProcessOptions, ServiceEndpointDefinition } from '@apollo/gateway';
+import { GraphQLDataSourceRequestKind } from '@apollo/gateway/dist/datasources/types';
 import { Deferred } from './deferred';
 import { GraphQLResponse } from 'apollo-server-types';
 import queueMicrotask from 'queue-microtask';
 import { HttpContext } from './http-context';
-import { GraphQLOperationBatchHandler } from './graphql-operation-batch-handler';
+import { GraphQLBatchHttpClient } from './graphql-batch-http-client';
 
 export interface BatcheableOperation {
   options: GraphQLDataSourceProcessOptions<HttpContext>,
@@ -12,8 +13,8 @@ export interface BatcheableOperation {
 
 export class GraphQLOperationsBatcher {
 
-  batcheableOperationsQueue: Map<string, BatcheableOperation[]> = new Map();
-  graphqlOperationBatchHandler: GraphQLOperationBatchHandler = new GraphQLOperationBatchHandler();
+  operationsRegistry: Map<string, BatcheableOperation[]> = new Map();
+  graphqlBatchHttpClient: GraphQLBatchHttpClient = new GraphQLBatchHttpClient();
 
   public enqueue(
     serviceEndpointDefinition: ServiceEndpointDefinition, 
@@ -24,15 +25,15 @@ export class GraphQLOperationsBatcher {
       deferred: new Deferred<GraphQLResponse>(),
     }
 
-    if (!this.batcheableOperationsQueue.has(serviceEndpointDefinition.name)) {
-      this.batcheableOperationsQueue.set(serviceEndpointDefinition.name, []);
+    if (!this.operationsRegistry.has(serviceEndpointDefinition.name)) {
+      this.operationsRegistry.set(serviceEndpointDefinition.name, []);
     }
-    this.batcheableOperationsQueue.get(serviceEndpointDefinition.name)?.push(operation);
+    this.operationsRegistry.get(serviceEndpointDefinition.name)?.push(operation);
   
     // setup microtask only after we add the first request for a particular service into the queue
     // this will execute the callback when no callbacks are left in the global execution context
     // and before executing the callback queue
-    if (this.batcheableOperationsQueue.get(serviceEndpointDefinition.name)?.length === 1) {
+    if (this.operationsRegistry.get(serviceEndpointDefinition.name)?.length === 1) {
       queueMicrotask(async () => {
         await this.consumeQueue(serviceEndpointDefinition);
       });
@@ -43,19 +44,22 @@ export class GraphQLOperationsBatcher {
   public async consumeQueue(serviceEndpointDefinition: ServiceEndpointDefinition) {
 
     const operations: BatcheableOperation[] | undefined = 
-      this.batcheableOperationsQueue.has(serviceEndpointDefinition.name) ? 
-        this.batcheableOperationsQueue.get(serviceEndpointDefinition.name) : 
+      this.operationsRegistry.has(serviceEndpointDefinition.name) ? 
+        this.operationsRegistry.get(serviceEndpointDefinition.name) : 
         [];
 
     if (!operations) {
       return;
     }
 
-    this.batcheableOperationsQueue.set(serviceEndpointDefinition.name, []);
+    this.operationsRegistry.set(serviceEndpointDefinition.name, []);
 
-    console.log(`dispatching queue of service ${serviceEndpointDefinition.name} with ${operations.length} operations`);
+    //console.log(`dispatching queue of service ${serviceEndpointDefinition.name} with ${operations.length} operations`);
 
-    const responses: GraphQLResponse[] = await this.graphqlOperationBatchHandler.handle(
+    if (operations[0].options.kind == GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
+      operations[0].options.incomingRequestContext.context.subgraphsRequestCount[serviceEndpointDefinition.name]++;
+    }
+    const responses: GraphQLResponse[] = await this.graphqlBatchHttpClient.sendBatchRequest(
       serviceEndpointDefinition,
       operations.map((operation) => operation.options)
     )

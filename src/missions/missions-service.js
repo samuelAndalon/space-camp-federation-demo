@@ -4,7 +4,7 @@ const apiUrl = 'http://localhost:3000';
 
 module.exports = class MissionsService {
   async getMissions(ids) {
-    console.log(`Request getMissions: ${ids}`);
+    // console.log(`Request getMissions ids: ${ids}`);
     const query = ids.map(id => `id=${id}`).join('&');
     const response = await fetch(`${apiUrl}/missions${query ? '?'+ query : ''}`);
     const body = await response.json();
@@ -12,7 +12,7 @@ module.exports = class MissionsService {
   }
 
   async getMissionsByAstronauts(ids) {
-    console.log(`Request getMissionsByAstronautIds: ${ids}`);
+    // console.log(`Request getMissionsByAstronautIds ids: ${ids}`);
     const response = await fetch(`${apiUrl}/missions`);
     const missions = await response.json();
     return ids

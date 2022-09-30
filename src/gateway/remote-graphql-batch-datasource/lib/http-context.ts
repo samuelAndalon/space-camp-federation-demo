@@ -1,5 +1,6 @@
 import { GraphQLOperationsBatcher } from "./graphql-operation-batcher";
 
 export interface HttpContext {
-  graphQLOperationsBatcher: GraphQLOperationsBatcher
+  graphQLOperationsBatcher: GraphQLOperationsBatcher,
+  subgraphsRequestCount: { [subgaphName: string]: number }
 }

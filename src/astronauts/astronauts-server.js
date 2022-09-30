@@ -32,7 +32,10 @@ const server = new ApolloServer({
   schema: buildSubgraphSchema([{ typeDefs, resolvers }]),
   plugins: [ ApolloServerPluginLandingPageGraphQLPlayground() ],
   context: ({ req }) => {
-    console.log(`Request into astronauts graphQL server: \n ${JSON.stringify(req.body, null, 2)}`);
+    const query = JSON.stringify(req.body, null, 2)
+    if (!query.includes('sdl')) {
+      console.log(`Request into astronauts subgraph: \n ${query}`);
+    }
     return {
       dataLoaderRegistry: {
         ...astronautsDataSource.getDataLoaders()

@@ -3,7 +3,7 @@ import { GraphQLDataSourceProcessOptions, GraphQLDataSourceRequestKind } from '@
 import { GraphQLResponse } from 'apollo-server-types';
 import { HttpContext } from './http-context';
 
-export class RemoteGraphQLDataSourceDecorator extends RemoteGraphQLDataSource<HttpContext> {
+export class RemoteGraphQLBatchDataSource extends RemoteGraphQLDataSource<HttpContext> {
 
   private serviceEndpointDefinition: ServiceEndpointDefinition;
 
@@ -15,7 +15,7 @@ export class RemoteGraphQLDataSourceDecorator extends RemoteGraphQLDataSource<Ht
   async process(options: GraphQLDataSourceProcessOptions<HttpContext>): Promise<GraphQLResponse> {
     if (options.kind === GraphQLDataSourceRequestKind.INCOMING_OPERATION) {
       // console.log(`request from query planner to service ${this.serviceEndpointDefinition.name}: ${JSON.stringify(options.request)}`);
-      const request = options.context.graphQLOperationsBatcher.enqueue(
+      const request = options.incomingRequestContext.context.graphQLOperationsBatcher.enqueue(
         this.serviceEndpointDefinition,
         options
       );

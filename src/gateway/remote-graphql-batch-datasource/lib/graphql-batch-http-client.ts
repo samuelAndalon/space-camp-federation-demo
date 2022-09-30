@@ -3,11 +3,11 @@ import { HttpContext } from './http-context';
 import { GraphQLResponse } from 'apollo-server-types';
 import fetch from 'cross-fetch';
 
-export class GraphQLOperationBatchHandler {
+export class GraphQLBatchHttpClient {
 
   fetcher: typeof fetch = fetch;
 
-  public async handle(
+  public async sendBatchRequest(
     serviceEndpointDefinition: ServiceEndpointDefinition, 
     options: GraphQLDataSourceProcessOptions<HttpContext>[]
   ): Promise<GraphQLResponse[]> {
